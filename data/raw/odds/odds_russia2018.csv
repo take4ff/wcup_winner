@@ -1,0 +1,65 @@
+home_team,away_team,odds_home,odds_draw,odds_away
+Russia,Saudi Arabia,1.5,4.0,7.5
+Egypt,Uruguay,3.8,3.2,2.15
+Russia,Egypt,1.85,3.4,4.75
+Uruguay,Saudi Arabia,1.38,4.75,9.5
+Uruguay,Russia,2.4,3.1,3.1
+Saudi Arabia,Egypt,2.4,3.1,3.1
+Morocco,Iran,1.87,3.4,4.5
+Portugal,Spain,3.1,3.1,2.45
+Portugal,Morocco,1.55,3.8,7.0
+Iran,Spain,10.0,5.5,1.29
+Iran,Portugal,7.0,4.25,1.53
+Spain,Morocco,1.4,4.5,9.0
+France,Australia,1.38,4.75,9.5
+Peru,Denmark,2.5,3.0,3.1
+Denmark,Australia,2.15,3.1,3.6
+France,Peru,1.55,3.7,7.0
+France,Denmark,1.8,3.3,5.0
+Australia,Peru,2.5,3.1,3.0
+Argentina,Iceland,1.3,5.25,12.0
+Croatia,Nigeria,1.85,3.4,4.75
+Argentina,Croatia,1.8,3.4,5.0
+Nigeria,Iceland,2.2,3.1,3.55
+Iceland,Croatia,4.5,3.4,1.87
+Nigeria,Argentina,9.5,5.0,1.35
+Costa Rica,Serbia,2.6,3.1,2.9
+Brazil,Switzerland,1.55,3.8,7.5
+Brazil,Costa Rica,1.33,5.0,11.0
+Serbia,Switzerland,2.65,3.0,2.85
+Brazil,Serbia,1.57,3.7,6.5
+Switzerland,Costa Rica,1.8,3.4,4.75
+Germany,Mexico,1.53,4.0,7.5
+Sweden,South Korea,1.87,3.4,4.5
+South Korea,Mexico,5.0,3.6,1.75
+Germany,Sweden,1.6,3.8,6.5
+South Korea,Germany,9.0,5.0,1.38
+Mexico,Sweden,2.2,3.1,3.5
+Belgium,Panama,1.17,7.5,19.0
+Tunisia,England,5.0,3.8,1.67
+Belgium,Tunisia,1.33,5.25,11.0
+England,Panama,1.24,6.5,15.0
+England,Belgium,3.1,3.2,2.4
+Panama,Tunisia,2.8,3.0,2.75
+Colombia,Japan,1.53,3.9,7.5
+Poland,Senegal,1.8,3.4,4.75
+Japan,Senegal,3.2,3.1,2.35
+Poland,Colombia,2.55,3.1,2.9
+Japan,Poland,3.4,3.1,2.25
+Senegal,Colombia,3.3,3.2,2.25
+France,Argentina,1.9,3.5,4.33
+Uruguay,Portugal,2.3,3.3,3.2
+Spain,Russia,1.35,4.75,9.5
+Croatia,Denmark,1.9,3.25,4.5
+Brazil,Mexico,1.45,4.25,8.0
+Belgium,Japan,1.42,4.5,9.0
+Sweden,Switzerland,2.0,3.3,4.0
+Colombia,England,2.95,3.25,2.5
+Uruguay,France,3.6,3.4,2.1
+Brazil,Belgium,1.67,3.6,5.5
+Sweden,England,3.2,3.1,2.4
+Russia,Croatia,3.0,3.1,2.55
+France,Belgium,1.95,3.4,4.33
+Croatia,England,2.4,3.1,3.1
+Belgium,England,2.1,3.2,3.6
+France,Croatia,1.8,3.5,4.75

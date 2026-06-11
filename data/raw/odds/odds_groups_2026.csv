@@ -1,0 +1,73 @@
+group,home_team,away_team,odds_home,odds_draw,odds_away,source
+A,Mexico,South Africa,1.44,4.6,9.0,real
+A,South Korea,Czech Republic,2.78,3.11,2.94,real
+A,Mexico,Czech Republic,1.75,3.56,4.54,real
+A,South Africa,South Korea,4.03,3.35,1.92,real
+A,Mexico,South Korea,1.75,3.61,4.5,real
+A,Czech Republic,South Africa,1.93,3.3,4.07,real
+B,Canada,Bosnia and Herzegovina,1.85,3.58,4.66,real
+B,Switzerland,Qatar,1.23,6.85,12.86,real
+B,Canada,Qatar,1.29,5.03,9.6,real
+B,Bosnia and Herzegovina,Switzerland,5.3,3.93,1.58,real
+B,Canada,Switzerland,3.44,3.33,2.1,real
+B,Qatar,Bosnia and Herzegovina,5.99,3.78,1.56,real
+C,Brazil,Morocco,1.69,3.77,5.57,real
+C,Haiti,Scotland,6.01,4.3,1.56,real
+C,Brazil,Scotland,1.47,4.82,5.37,real
+C,Morocco,Haiti,1.3,5.06,9.14,real
+C,Brazil,Haiti,1.072,11.887,28.842,real
+C,Scotland,Morocco,4.1,3.2,1.95,real
+D,United States,Paraguay,1.97,3.49,4.16,real
+D,Australia,Turkey,5.22,3.88,1.7,real
+D,United States,Australia,1.71,3.95,4.3,real
+D,Paraguay,Turkey,3.42,3.13,2.2,real
+D,United States,Turkey,2.56,3.52,2.56,real
+D,Paraguay,Australia,2.12,3.17,3.57,real
+E,Germany,Curaçao,1.04,19.0,41.0,real
+E,Ivory Coast,Ecuador,3.69,2.83,2.45,real
+E,Germany,Ecuador,1.73,3.7,4.5,real
+E,Curaçao,Ivory Coast,11.7,6.49,1.2,real
+E,Germany,Ivory Coast,1.54,4.27,5.29,real
+E,Ecuador,Curaçao,1.18,7.08,11.55,real
+F,Netherlands,Japan,2.04,3.62,3.72,real
+F,Sweden,Tunisia,1.93,3.48,4.32,real
+F,Netherlands,Sweden,1.61,4.02,4.95,real
+F,Tunisia,Japan,5.25,3.57,1.66,real
+F,Japan,Sweden,2.08,3.37,3.47,real
+F,Tunisia,Netherlands,6.28,4.22,1.47,real
+G,Belgium,Egypt,1.65,4.0,5.6,real
+G,Iran,New Zealand,1.84,3.57,4.73,real
+G,Belgium,Iran,1.37,4.62,7.75,real
+G,Egypt,New Zealand,1.73,3.81,4.33,real
+G,Belgium,New Zealand,1.25,5.73,9.66,real
+G,Iran,Egypt,3.55,2.99,2.22,real
+H,Spain,Cape Verde,1.08,11.78,28.81,real
+H,Saudi Arabia,Uruguay,7.75,4.47,1.46,real
+H,Spain,Uruguay,1.61,3.86,5.15,real
+H,Cape Verde,Saudi Arabia,2.52,3.27,2.75,real
+H,Spain,Saudi Arabia,1.09,10.21,21.54,real
+H,Uruguay,Cape Verde,1.4,4.47,7.28,real
+I,France,Senegal,1.49,4.4,7.09,real
+I,Norway,Iraq,1.2,7.3,14.39,real
+I,France,Norway,1.83,3.54,4.16,real
+I,Senegal,Iraq,1.38,4.55,7.6,real
+I,France,Iraq,1.11,8.06,24.06,real
+I,Norway,Senegal,2.09,3.51,3.28,real
+J,Argentina,Algeria,1.41,4.56,9.05,real
+J,Austria,Jordan,1.33,5.52,9.25,real
+J,Argentina,Austria,1.61,3.71,5.49,real
+J,Algeria,Jordan,1.48,4.17,6.2,real
+J,Argentina,Jordan,1.16,7.12,13.33,real
+J,Austria,Algeria,2.13,3.03,3.74,real
+K,Portugal,Uzbekistan,1.21,6.31,10.82,real
+K,Colombia,DR Congo,1.43,4.23,7.22,real
+K,Portugal,Colombia,2.12,3.27,3.46,real
+K,Uzbekistan,DR Congo,3.05,3.32,2.29,real
+K,Portugal,DR Congo,1.28,5.84,11.74,real
+K,Colombia,Uzbekistan,1.39,4.74,9.17,real
+L,England,Croatia,1.74,3.9,4.91,real
+L,Ghana,Panama,2.18,3.51,3.45,real
+L,England,Ghana,1.29,5.32,8.93,real
+L,Croatia,Panama,1.55,3.68,6.29,real
+L,England,Panama,1.27,6.38,7.56,real
+L,Croatia,Ghana,1.6,3.78,5.51,real

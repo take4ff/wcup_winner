@@ -1,0 +1,18 @@
+name: AI_base
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10.19
+  - pip
+  - pip:
+      - pandas==2.3.3
+      - numpy==2.2.5
+      - scikit-learn==1.7.2
+      - lightgbm==4.6.0
+      - optuna==4.9.0
+      - scipy==1.15.3
+      - joblib==1.5.3
+      - requests==2.32.5
+      - sqlalchemy==2.0.50
+      - beautifulsoup4==4.14.3

@@ -1,123 +1,73 @@
 group,home_team,away_team,bet_type,model_prob,odds,EV,kelly_frac,stake,odds_source
-B,Qatar,Switzerland,1X2 Away,77.7%,12.86,9.9922,10.0%,10.0,real
-E,Curaçao,Ecuador,1X2 Away,73.7%,11.55,8.5123,10.0%,10.0,real
-K,Uzbekistan,Colombia,1X2 Away,63.4%,9.17,5.8138,10.0%,10.0,real
-H,Cape Verde,Uruguay,1X2 Away,63.7%,7.28,4.6374,10.0%,10.0,real
-B,Qatar,Switzerland,DC X2,92.7%,4.469,4.1431,10.0%,10.0,real
-E,Curaçao,Ecuador,DC X2,91.0%,4.389,3.9943,10.0%,10.0,real
-F,Netherlands,Tunisia,1X2 Home,62.8%,6.28,3.9438,10.0%,10.0,real
-F,Japan,Tunisia,1X2 Home,57.1%,5.25,2.9978,10.0%,10.0,real
-I,Norway,Iraq,1X2 Away,18.7%,14.39,2.6909,6.3%,6.31,real
-K,Uzbekistan,Colombia,DC X2,85.4%,3.125,2.6686,10.0%,10.0,real
-B,Bosnia and Herzegovina,Qatar,1X2 Home,43.1%,5.99,2.5817,10.0%,10.0,real
-C,Brazil,Haiti,1X2 Away,8.9%,28.842,2.5669,2.8%,2.81,real
-H,Cape Verde,Uruguay,DC X2,86.2%,2.769,2.3873,10.0%,10.0,real
-J,Austria,Jordan,1X2 Away,24.4%,9.25,2.257,7.6%,7.62,real
-C,Morocco,Scotland,1X2 Home,54.0%,4.1,2.214,10.0%,10.0,real
-C,Brazil,Haiti,DC X2,26.3%,8.418,2.2139,8.2%,8.18,real
-E,Germany,Curaçao,1X2 Draw,11.4%,19.0,2.166,3.2%,3.24,real
-E,Germany,Curaçao,DC X2,16.5%,12.983,2.1423,4.8%,4.77,real
-F,Netherlands,Tunisia,DC 1X,84.3%,2.524,2.1277,10.0%,10.0,real
-I,France,Iraq,1X2 Away,8.7%,24.06,2.0932,2.4%,2.37,real
-E,Germany,Curaçao,1X2 Away,5.1%,41.0,2.091,1.4%,1.36,real
-I,Norway,Iraq,DC X2,43.0%,4.843,2.0825,10.0%,10.0,real
-C,Brazil,Haiti,1X2 Draw,17.4%,11.887,2.0683,4.9%,4.91,real
-E,Curaçao,Ivory Coast,1X2 Home,17.4%,11.7,2.0358,4.8%,4.84,real
-A,South Africa,Czech Republic,1X2 Away,46.8%,4.07,1.9048,10.0%,10.0,real
-G,Belgium,Iran,1X2 Away,24.5%,7.75,1.8987,6.7%,6.66,real
-L,Ghana,Panama,1X2 Away,54.1%,3.45,1.8665,10.0%,10.0,real
-C,Haiti,Scotland,1X2 Home,30.1%,6.01,1.809,8.1%,8.07,real
-I,Norway,Iraq,1X2 Draw,24.3%,7.3,1.7739,6.1%,6.14,real
-F,Japan,Tunisia,DC 1X,81.7%,2.125,1.7361,10.0%,10.0,real
-K,Portugal,Uzbekistan,1X2 Away,16.0%,10.82,1.7312,3.7%,3.72,real
-I,Senegal,Iraq,1X2 Away,22.7%,7.6,1.7252,5.5%,5.49,real
-J,Austria,Jordan,DC X2,49.8%,3.457,1.7216,10.0%,10.0,real
-L,Croatia,Panama,1X2 Away,27.1%,6.29,1.7046,6.7%,6.66,real
-E,Curaçao,Ivory Coast,DC 1X,40.4%,4.174,1.6865,10.0%,10.0,real
-B,Bosnia and Herzegovina,Qatar,DC 1X,70.0%,2.318,1.6223,10.0%,10.0,real
-K,Portugal,Uzbekistan,DC X2,39.1%,3.986,1.5584,9.4%,9.35,real
-I,France,Iraq,DC X2,25.5%,6.037,1.5396,5.4%,5.35,real
-J,Algeria,Jordan,1X2 Away,24.7%,6.2,1.5314,5.1%,5.11,real
-D,United States,Australia,1X2 Away,35.0%,4.3,1.505,7.7%,7.65,real
-E,Curaçao,Ivory Coast,1X2 Draw,23.0%,6.49,1.4927,4.5%,4.49,real
-D,United States,Paraguay,1X2 Away,35.5%,4.16,1.4768,7.5%,7.54,real
-G,Belgium,Iran,DC X2,50.4%,2.895,1.4588,10.0%,10.0,real
-K,Portugal,Uzbekistan,1X2 Draw,23.1%,6.31,1.4576,4.3%,4.31,real
-C,Haiti,Scotland,DC 1X,58.1%,2.507,1.4563,10.0%,10.0,real
-K,Portugal,DR Congo,1X2 Away,12.4%,11.74,1.4558,2.1%,2.12,real
-C,Morocco,Scotland,DC 1X,80.1%,1.797,1.4396,10.0%,10.0,real
-D,Australia,Turkey,1X2 Home,27.5%,5.22,1.4355,5.2%,5.16,real
-I,Senegal,Iraq,DC X2,49.6%,2.846,1.4117,10.0%,10.0,real
-J,Austria,Jordan,1X2 Draw,25.4%,5.52,1.4021,4.4%,4.45,real
-I,Senegal,Norway,1X2 Away,42.7%,3.28,1.4006,8.8%,8.78,real
-C,Morocco,Haiti,1X2 Away,15.3%,9.14,1.3984,2.4%,2.45,real
-F,Japan,Sweden,1X2 Home,67.2%,2.08,1.3978,10.0%,10.0,real
-L,Ghana,Panama,DC X2,78.6%,1.74,1.3675,10.0%,10.0,real
-A,South Korea,Czech Republic,1X2 Home,49.1%,2.78,1.365,10.0%,10.0,real
-G,Belgium,New Zealand,1X2 Away,14.1%,9.66,1.3621,2.1%,2.09,real
-I,France,Iraq,1X2 Draw,16.8%,8.06,1.3541,2.5%,2.51,real
-J,Algeria,Austria,1X2 Away,36.1%,3.74,1.3501,6.4%,6.39,real
-D,United States,Australia,DC X2,65.5%,2.059,1.3485,10.0%,10.0,real
-A,South Africa,Czech Republic,DC X2,73.6%,1.822,1.3413,10.0%,10.0,real
-K,Portugal,DR Congo,DC X2,34.1%,3.9,1.3299,5.7%,5.69,real
-K,Portugal,Colombia,1X2 Away,38.3%,3.46,1.3252,6.6%,6.61,real
-G,Egypt,New Zealand,1X2 Away,30.1%,4.33,1.3033,4.6%,4.55,real
-C,Morocco,Haiti,DC X2,39.8%,3.257,1.2963,6.6%,6.56,real
-K,Portugal,DR Congo,1X2 Draw,21.7%,5.84,1.2673,2.8%,2.76,real
-D,United States,Paraguay,DC X2,66.6%,1.898,1.264,10.0%,10.0,real
-D,Paraguay,Australia,1X2 Away,35.4%,3.57,1.2638,5.1%,5.13,real
-J,Algeria,Jordan,DC X2,50.5%,2.493,1.259,8.7%,8.67,real
-C,Morocco,Haiti,1X2 Draw,24.5%,5.06,1.2397,3.0%,2.95,real
-D,Australia,Turkey,DC 1X,55.6%,2.226,1.2375,9.7%,9.69,real
-E,Curaçao,Ecuador,1X2 Draw,17.3%,7.08,1.2248,1.8%,1.85,real
-I,Senegal,Iraq,1X2 Draw,26.9%,4.55,1.2239,3.2%,3.15,real
-E,Ivory Coast,Ecuador,1X2 Away,49.6%,2.45,1.2152,7.4%,7.42,real
-F,Tunisia,Sweden,1X2 Away,27.9%,4.32,1.2053,3.1%,3.09,real
-D,United States,Australia,1X2 Draw,30.5%,3.95,1.2047,3.5%,3.47,real
-C,Haiti,Scotland,1X2 Draw,28.0%,4.3,1.204,3.1%,3.09,real
-E,Germany,Ecuador,1X2 Away,26.7%,4.5,1.2015,2.9%,2.88,real
-L,Croatia,Panama,DC X2,51.7%,2.322,1.2003,7.6%,7.58,real
-K,Uzbekistan,DR Congo,1X2 Home,39.3%,3.05,1.1986,4.8%,4.85,real
-G,Belgium,New Zealand,DC X2,33.3%,3.597,1.1977,3.8%,3.81,real
-G,Belgium,Iran,1X2 Draw,25.9%,4.62,1.1966,2.7%,2.72,real
-A,South Africa,South Korea,1X2 Away,62.0%,1.92,1.1904,10.0%,10.0,real
-G,Egypt,New Zealand,DC X2,57.7%,2.027,1.1694,8.3%,8.26,real
-H,Spain,Uruguay,1X2 Home,72.5%,1.61,1.1673,10.0%,10.0,real
-I,Senegal,Norway,DC X2,68.8%,1.696,1.1665,10.0%,10.0,real
-F,Netherlands,Sweden,1X2 Home,72.2%,1.61,1.1624,10.0%,10.0,real
-C,Brazil,Morocco,1X2 Away,20.8%,5.57,1.1586,1.7%,1.73,real
-B,Canada,Bosnia and Herzegovina,1X2 Home,62.4%,1.85,1.1544,9.1%,9.08,real
-A,Mexico,South Korea,1X2 Draw,31.7%,3.61,1.1444,2.8%,2.77,real
-G,Iran,New Zealand,1X2 Away,24.0%,4.73,1.1352,1.8%,1.81,real
-F,Japan,Sweden,DC 1X,87.3%,1.286,1.1228,10.0%,10.0,real
-F,Netherlands,Japan,1X2 Away,30.1%,3.72,1.1197,2.2%,2.2,real
-B,Bosnia and Herzegovina,Switzerland,1X2 Away,70.8%,1.58,1.1186,10.0%,10.0,real
-L,England,Panama,1X2 Draw,17.5%,6.38,1.1165,1.1%,1.08,real
-A,Mexico,South Korea,DC X2,55.7%,2.003,1.1157,5.8%,5.77,real
-E,Germany,Ecuador,DC X2,54.8%,2.03,1.1127,5.5%,5.46,real
-B,Canada,Qatar,1X2 Draw,22.1%,5.03,1.1116,1.4%,1.38,real
-I,France,Norway,1X2 Home,60.6%,1.83,1.109,6.6%,6.57,real
-K,Uzbekistan,DR Congo,DC 1X,69.7%,1.59,1.108,9.2%,9.17,real
-J,Argentina,Austria,1X2 Home,68.8%,1.61,1.1077,8.8%,8.83,real
-A,South Korea,Czech Republic,DC 1X,75.2%,1.468,1.1038,10.0%,10.0,real
-G,Belgium,New Zealand,1X2 Draw,19.2%,5.73,1.1002,1.1%,1.06,real
-A,Mexico,South Africa,1X2 Draw,23.9%,4.6,1.0994,1.4%,1.38,real
-K,Portugal,Colombia,DC X2,65.1%,1.681,1.0944,6.9%,6.93,real
-B,Canada,Switzerland,1X2 Draw,32.8%,3.33,1.0922,2.0%,1.98,real
-D,Australia,Turkey,1X2 Draw,28.1%,3.88,1.0903,1.6%,1.57,real
-D,United States,Paraguay,1X2 Draw,31.1%,3.49,1.0854,1.7%,1.71,real
-J,Algeria,Austria,DC X2,64.8%,1.674,1.0847,6.3%,6.29,real
-D,United States,Turkey,1X2 Away,42.3%,2.56,1.0829,2.7%,2.66,real
-D,Paraguay,Australia,DC X2,64.4%,1.679,1.0813,6.0%,5.98,real
-D,United States,Turkey,DC X2,72.9%,1.482,1.0805,8.3%,8.34,real
-A,Mexico,South Korea,1X2 Away,24.0%,4.5,1.08,1.1%,1.14,real
-D,United States,Turkey,1X2 Draw,30.6%,3.52,1.0771,1.5%,1.53,real
-J,Algeria,Jordan,1X2 Draw,25.8%,4.17,1.0759,1.2%,1.2,real
-B,Canada,Switzerland,DC 1X,63.5%,1.692,1.0745,5.4%,5.38,real
-B,Canada,Bosnia and Herzegovina,DC 1X,87.7%,1.22,1.0697,10.0%,10.0,real
-L,England,Ghana,1X2 Home,82.8%,1.29,1.0681,10.0%,10.0,real
-G,Belgium,Egypt,1X2 Away,18.9%,5.6,1.0584,0.6%,0.63,real
-C,Brazil,Scotland,1X2 Home,71.9%,1.47,1.0569,6.1%,6.06,real
-B,Canada,Switzerland,1X2 Home,30.7%,3.44,1.0561,1.1%,1.15,real
-G,Egypt,New Zealand,1X2 Draw,27.6%,3.81,1.0516,0.9%,0.92,real
-A,Mexico,South Africa,DC X2,34.5%,3.044,1.0502,1.2%,1.23,real
+C,Brazil,Haiti,1X2 Away,6.3%,29.053,1.8268,1.5%,1.47,real
+E,Germany,Curaçao,1X2 Draw,8.9%,19.0,1.6974,1.9%,1.94,real
+E,Germany,Curaçao,DC X2,12.9%,12.983,1.6759,2.8%,2.82,real
+C,Brazil,Haiti,DC X2,19.5%,8.484,1.6552,4.4%,4.38,real
+E,Germany,Curaçao,1X2 Away,4.0%,41.0,1.6294,0.8%,0.79,real
+I,Norway,Iraq,1X2 Away,11.3%,14.4,1.6257,2.3%,2.33,real
+C,Brazil,Haiti,1X2 Draw,13.2%,11.984,1.5844,2.7%,2.66,real
+I,France,Iraq,1X2 Away,6.3%,24.06,1.5274,1.1%,1.14,real
+J,Austria,Jordan,1X2 Away,16.4%,9.3,1.5271,3.2%,3.18,real
+I,Norway,Iraq,DC X2,31.2%,4.844,1.5127,6.7%,6.67,real
+I,Norway,Iraq,1X2 Draw,19.9%,7.3,1.4554,3.6%,3.61,real
+E,Curaçao,Ivory Coast,1X2 Home,12.1%,11.54,1.4001,1.9%,1.9,real
+L,Ghana,Panama,1X2 Away,40.5%,3.45,1.3963,8.1%,8.09,real
+G,Belgium,Iran,1X2 Away,17.5%,7.75,1.3601,2.7%,2.67,real
+J,Austria,Jordan,DC X2,38.4%,3.472,1.3331,6.7%,6.74,real
+E,Curaçao,Ivory Coast,DC 1X,31.8%,4.146,1.3193,5.1%,5.08,real
+F,Tunisia,Sweden,1X2 Home,29.6%,4.43,1.3097,4.5%,4.51,real
+K,Portugal,Uzbekistan,1X2 Away,12.0%,10.89,1.3089,1.6%,1.56,real
+I,France,Iraq,DC X2,21.7%,6.037,1.308,3.1%,3.06,real
+E,Curaçao,Ivory Coast,1X2 Draw,19.7%,6.47,1.2741,2.5%,2.51,real
+K,Portugal,Uzbekistan,DC X2,31.6%,4.015,1.2679,4.4%,4.44,real
+I,Senegal,Iraq,1X2 Away,16.4%,7.65,1.2575,1.9%,1.94,real
+L,Croatia,Panama,1X2 Away,20.0%,6.29,1.2573,2.4%,2.43,real
+K,Portugal,Uzbekistan,1X2 Draw,19.6%,6.36,1.244,2.3%,2.28,real
+I,France,Iraq,1X2 Draw,15.3%,8.06,1.2345,1.7%,1.66,real
+J,Austria,Jordan,1X2 Draw,22.0%,5.54,1.2176,2.4%,2.4,real
+K,Portugal,DR Congo,1X2 Away,10.3%,11.7,1.2068,1.0%,0.97,real
+J,Algeria,Jordan,1X2 Away,19.2%,6.2,1.1928,1.9%,1.85,real
+G,Belgium,Iran,DC X2,41.0%,2.895,1.1857,4.9%,4.9,real
+G,Egypt,Iran,1X2 Away,33.4%,3.55,1.1841,3.6%,3.61,real
+K,Portugal,Colombia,1X2 Away,34.2%,3.46,1.1833,3.7%,3.73,real
+K,Portugal,DR Congo,DC X2,30.4%,3.887,1.181,3.1%,3.14,real
+L,Ghana,Panama,DC X2,67.5%,1.74,1.1745,10.0%,10.0,real
+I,Senegal,Iraq,DC X2,41.0%,2.865,1.1733,4.6%,4.65,real
+K,Portugal,DR Congo,1X2 Draw,20.1%,5.82,1.1682,1.7%,1.74,real
+B,Bosnia and Herzegovina,Qatar,1X2 Away,20.6%,5.68,1.1676,1.8%,1.79,real
+L,England,Panama,1X2 Draw,18.0%,6.39,1.1516,1.4%,1.41,real
+C,Haiti,Scotland,1X2 Home,19.6%,5.87,1.1479,1.5%,1.52,real
+B,Canada,Bosnia and Herzegovina,1X2 Home,60.7%,1.88,1.1408,8.0%,8.0,real
+E,Germany,Ecuador,1X2 Away,25.4%,4.49,1.1403,2.0%,2.01,real
+F,Tunisia,Sweden,DC 1X,57.7%,1.958,1.1307,6.8%,6.81,real
+G,Belgium,New Zealand,1X2 Away,11.7%,9.66,1.1303,0.8%,0.75,real
+E,Ivory Coast,Ecuador,1X2 Away,45.8%,2.45,1.1231,4.2%,4.25,real
+I,Senegal,Iraq,1X2 Draw,24.5%,4.58,1.1229,1.7%,1.72,real
+C,Haiti,Scotland,DC 1X,45.1%,2.469,1.1136,3.9%,3.87,real
+D,United States,Paraguay,1X2 Away,26.3%,4.2,1.106,1.7%,1.66,real
+J,Algeria,Jordan,DC X2,44.3%,2.493,1.1051,3.5%,3.52,real
+C,Morocco,Haiti,1X2 Away,11.9%,9.23,1.1002,0.6%,0.61,real
+C,Brazil,Morocco,1X2 Away,18.6%,5.9,1.0995,1.0%,1.02,real
+B,Qatar,Switzerland,1X2 Draw,16.2%,6.78,1.0987,0.9%,0.85,real
+A,South Korea,Czech Republic,1X2 Home,42.4%,2.59,1.0974,3.1%,3.06,real
+E,Germany,Ecuador,DC X2,54.1%,2.028,1.0967,4.7%,4.69,real
+C,Haiti,Scotland,1X2 Draw,25.6%,4.26,1.0887,1.4%,1.36,real
+C,Morocco,Haiti,DC X2,33.1%,3.289,1.0882,1.9%,1.93,real
+J,Argentina,Algeria,1X2 Away,12.0%,9.05,1.0874,0.5%,0.54,real
+B,Canada,Switzerland,1X2 Home,31.5%,3.44,1.0826,1.7%,1.69,real
+G,Belgium,Iran,1X2 Draw,23.4%,4.62,1.0817,1.1%,1.13,real
+C,Morocco,Haiti,1X2 Draw,21.2%,5.11,1.0816,1.0%,0.99,real
+G,Belgium,New Zealand,DC X2,29.8%,3.597,1.0734,1.4%,1.42,real
+L,Croatia,Panama,DC X2,46.2%,2.322,1.073,2.8%,2.77,real
+F,Japan,Sweden,1X2 Home,51.7%,2.07,1.0695,3.2%,3.25,real
+D,Australia,Turkey,1X2 Home,21.1%,5.07,1.0686,0.8%,0.84,real
+B,Qatar,Switzerland,DC 1X,23.9%,4.445,1.0618,0.9%,0.9,real
+E,Germany,Ecuador,1X2 Draw,28.7%,3.7,1.0607,1.1%,1.12,real
+B,Bosnia and Herzegovina,Qatar,DC X2,47.5%,2.233,1.0601,2.4%,2.43,real
+L,England,Panama,DC X2,30.6%,3.465,1.0589,1.2%,1.2,real
+D,United States,Australia,1X2 Away,24.6%,4.3,1.0583,0.9%,0.88,real
+J,Argentina,Jordan,1X2 Away,7.9%,13.34,1.0578,0.2%,0.23,real
+J,Argentina,Jordan,DC X2,22.7%,4.647,1.0542,0.7%,0.75,real
+J,Argentina,Jordan,1X2 Draw,14.8%,7.13,1.0524,0.4%,0.43,real
+D,Australia,Turkey,DC 1X,48.4%,2.172,1.0521,2.2%,2.22,real
+A,Mexico,Czech Republic,1X2 Home,59.8%,1.76,1.0518,3.4%,3.41,real

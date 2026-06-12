@@ -20,7 +20,7 @@ def main():
         "shootouts.csv": f"{base_url}/shootouts.csv"
     }
     
-    data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../data/raw"))
+    data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../data/raw/match"))
     
     for filename, url in files.items():
         save_path = os.path.join(data_dir, filename)

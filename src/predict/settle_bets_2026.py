@@ -115,7 +115,13 @@ def main():
             # W杯期間中(2026年6月)の試合に絞る
             match = match[(match['date'] >= '2026-06-01') & (match['date'] <= '2026-07-31')]
 
-        if len(match) > 0:
+        # 手入力の match_result 列（購入時のホーム/アウェイ視点, 例: "2-0"）があれば優先利用
+        manual_score = parse_target_score(row['match_result']) if 'match_result' in df_buy.columns else None
+
+        act_home_score = act_away_score = None
+        if manual_score is not None:
+            act_home_score, act_away_score = manual_score
+        elif len(match) > 0:
             match_row = match.iloc[0]
             act_h = match_row['home_score']
             act_a = match_row['away_score']
@@ -136,6 +142,8 @@ def main():
                 act_home_score = int(act_h)
                 act_away_score = int(act_a)
 
+        if act_home_score is not None:
+
             # 的中判定
             is_won = evaluate_bet(row['selection'], act_home_score, act_away_score, h_team, a_team)
             odds = float(row['odds'])
@@ -154,6 +162,8 @@ def main():
 
             df_buy.at[idx, 'result_amount_yen'] = result_amt
             df_buy.at[idx, 'status'] = status
+            if 'match_result' in df_buy.columns:
+                df_buy.at[idx, 'match_result'] = f"{act_home_score}-{act_away_score}"
             updated_count += 1
 
             disp_date = b_date.strftime('%Y-%m-%d')

@@ -6,6 +6,9 @@ import numpy as np
 from scipy.stats import poisson
 import joblib
 
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "../pipeline"))
+from features_common import build_views_from_match_df  # noqa: E402
+
 def calculate_match_probabilities(lambda_home, lambda_away, rho=0.0, max_goals=10):
     h_probs = poisson.pmf(np.arange(max_goals + 1), lambda_home)
     a_probs = poisson.pmf(np.arange(max_goals + 1), lambda_away)
@@ -37,8 +40,14 @@ def main():
     parser = argparse.ArgumentParser(description='World Cup Backtest')
     parser.add_argument('--year', type=int, choices=[2018, 2022], default=2022,
                         help='バックテスト対象の大会年 (2018 or 2022)')
+    parser.add_argument('--cls_blend', type=float, default=0.25,
+                        help='1X2確率における LGBMClassifier のブレンド比率 (0=Poisson行列のみ, 1=分類器のみ, default: 0.25 = walkforward最適値)')
+    parser.add_argument('--model_dir', type=str, default=None,
+                        help='使用するモデルのディレクトリ (base_dirからの相対パス)。'
+                             '省略時は models/backtest_{year} があればそれを、なければ models を使用')
     args = parser.parse_args()
     year = args.year
+    w_cls = args.cls_blend
     
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
     features_path = os.path.join(base_dir, "data/processed/features.csv")
@@ -72,11 +81,24 @@ def main():
         focus_team = 'Japan'
     
     print(f"====== {year} FIFA World Cup Backtest ======")
-    
-    poisson_model_path = os.path.join(base_dir, "models/poisson_model.joblib")
-    lgbm_model_path = os.path.join(base_dir, "models/lgbm_model.joblib")
-    lgbm_classifier_path = os.path.join(base_dir, "models/lgbm_classifier_model.joblib")
-    feature_cols_path = os.path.join(base_dir, "models/feature_cols.joblib")
+
+    # モデルディレクトリの解決: 指定 > 大会専用カットオフモデル > 本番モデル
+    if args.model_dir:
+        model_dir = os.path.join(base_dir, args.model_dir)
+    else:
+        year_dir = os.path.join(base_dir, f"models/backtest_{year}")
+        if os.path.exists(os.path.join(year_dir, "poisson_model.joblib")):
+            model_dir = year_dir
+        else:
+            model_dir = os.path.join(base_dir, "models")
+            print(f"[WARNING] {year_dir} が存在しないため本番モデルを使用します。"
+                  f"大会後のデータで学習したモデルの場合、結果はリークを含みます。")
+    print(f"Using models from: {model_dir}")
+
+    poisson_model_path = os.path.join(model_dir, "poisson_model.joblib")
+    lgbm_model_path = os.path.join(model_dir, "lgbm_model.joblib")
+    lgbm_classifier_path = os.path.join(model_dir, "lgbm_classifier_model.joblib")
+    feature_cols_path = os.path.join(model_dir, "feature_cols.joblib")
     
     print("Loading datasets and models...")
     df_features = pd.read_csv(features_path)
@@ -103,10 +125,7 @@ def main():
     
     # 選手価値差分特徴量の再計算
     wc_matches['squad_value_diff'] = wc_matches['home_squad_value'] - wc_matches['away_squad_value']
-    
-    print(f"Extracted {len(wc_matches)} World Cup matches from features.")    # 選手価値差分特徴量の再計算
-    wc_matches['squad_value_diff'] = wc_matches['home_squad_value'] - wc_matches['away_squad_value']
-    
+
     print(f"Extracted {len(wc_matches)} World Cup matches from features.")
     
     def make_merge_key(team1, team2):
@@ -119,220 +138,9 @@ def main():
     df_odds_clean = df_odds[['merge_key', 'odds_home', 'odds_draw', 'odds_away']].drop_duplicates(subset=['merge_key'])
     wc_data = wc_matches.merge(df_odds_clean, on='merge_key', how='left')
     
-    # 予測用特徴量の作成
-    home_features = pd.DataFrame()
-    home_features['elo_diff'] = wc_data['elo_diff']
-    home_features['squad_value_diff'] = wc_data['squad_value_diff']
-    home_features['last_wcup_matches_own'] = wc_data['home_last_wcup_matches']
-    home_features['last_wcup_matches_opp'] = wc_data['away_last_wcup_matches']
-    
-    # 実質ホームアドバンテージ
-    home_features['same_conf_own'] = wc_data['home_same_confederation']
-    home_features['same_conf_opp'] = wc_data['away_same_confederation']
-    home_features['is_host_own'] = wc_data['home_is_host']
-    home_features['is_host_opp'] = wc_data['away_is_host']
-    
-    # 基本 rolling
-    home_features['goals_roll5_own'] = wc_data['home_goals_roll5']
-    home_features['conceded_roll5_own'] = wc_data['home_conceded_roll5']
-    home_features['win_rate_roll5_own'] = wc_data['home_win_rate_roll5']
-    home_features['goals_roll10_own'] = wc_data['home_goals_roll10']
-    home_features['conceded_roll10_own'] = wc_data['home_conceded_roll10']
-    home_features['win_rate_roll10_own'] = wc_data['home_win_rate_roll10']
-    home_features['goals_weighted_roll5_own'] = wc_data['home_goals_weighted_roll5']
-    home_features['conceded_weighted_roll5_own'] = wc_data['home_conceded_weighted_roll5']
-    home_features['goals_weighted_roll10_own'] = wc_data['home_goals_weighted_roll10']
-    home_features['conceded_weighted_roll10_own'] = wc_data['home_conceded_weighted_roll10']
-    
-    home_features['goals_roll5_opp'] = wc_data['away_goals_roll5']
-    home_features['conceded_roll5_opp'] = wc_data['away_conceded_roll5']
-    home_features['win_rate_roll5_opp'] = wc_data['away_win_rate_roll5']
-    home_features['goals_roll10_opp'] = wc_data['away_goals_roll10']
-    home_features['conceded_roll10_opp'] = wc_data['away_conceded_roll10']
-    home_features['win_rate_roll10_opp'] = wc_data['away_win_rate_roll10']
-    home_features['goals_weighted_roll5_opp'] = wc_data['away_goals_weighted_roll5']
-    home_features['conceded_weighted_roll5_opp'] = wc_data['away_conceded_weighted_roll5']
-    home_features['goals_weighted_roll10_opp'] = wc_data['away_goals_weighted_roll10']
-    home_features['conceded_weighted_roll10_opp'] = wc_data['away_conceded_weighted_roll10']
-    
-    # 基本 ewm
-    home_features['goals_ewm5_own'] = wc_data['home_goals_ewm5']
-    home_features['conceded_ewm5_own'] = wc_data['home_conceded_ewm5']
-    home_features['win_rate_ewm5_own'] = wc_data['home_win_rate_ewm5']
-    home_features['goals_ewm10_own'] = wc_data['home_goals_ewm10']
-    home_features['conceded_ewm10_own'] = wc_data['home_conceded_ewm10']
-    home_features['win_rate_ewm10_own'] = wc_data['home_win_rate_ewm10']
-    home_features['goals_weighted_ewm5_own'] = wc_data['home_goals_weighted_ewm5']
-    home_features['conceded_weighted_ewm5_own'] = wc_data['home_conceded_weighted_ewm5']
-    home_features['goals_weighted_ewm10_own'] = wc_data['home_goals_weighted_ewm10']
-    home_features['conceded_weighted_ewm10_own'] = wc_data['home_conceded_weighted_ewm10']
-    
-    home_features['goals_ewm5_opp'] = wc_data['away_goals_ewm5']
-    home_features['conceded_ewm5_opp'] = wc_data['away_conceded_ewm5']
-    home_features['win_rate_ewm5_opp'] = wc_data['away_win_rate_ewm5']
-    home_features['goals_ewm10_opp'] = wc_data['away_goals_ewm10']
-    home_features['conceded_ewm10_opp'] = wc_data['away_conceded_ewm10']
-    home_features['win_rate_ewm10_opp'] = wc_data['away_win_rate_ewm10']
-    home_features['goals_weighted_ewm5_opp'] = wc_data['away_goals_weighted_ewm5']
-    home_features['conceded_weighted_ewm5_opp'] = wc_data['away_conceded_weighted_ewm5']
-    home_features['goals_weighted_ewm10_opp'] = wc_data['away_goals_weighted_ewm10']
-    home_features['conceded_weighted_ewm10_opp'] = wc_data['away_conceded_weighted_ewm10']
-    
-    # 公式戦優先 rolling
-    home_features['goals_official_roll5_own'] = wc_data['home_goals_official_roll5']
-    home_features['conceded_official_roll5_own'] = wc_data['home_conceded_official_roll5']
-    home_features['win_rate_official_roll5_own'] = wc_data['home_win_rate_official_roll5']
-    home_features['goals_official_roll10_own'] = wc_data['home_goals_official_roll10']
-    home_features['conceded_official_roll10_own'] = wc_data['home_conceded_official_roll10']
-    home_features['win_rate_official_roll10_own'] = wc_data['home_win_rate_official_roll10']
-    home_features['goals_weighted_official_roll5_own'] = wc_data['home_goals_weighted_official_roll5']
-    home_features['conceded_weighted_official_roll5_own'] = wc_data['home_conceded_weighted_official_roll5']
-    home_features['goals_weighted_official_roll10_own'] = wc_data['home_goals_weighted_official_roll10']
-    home_features['conceded_weighted_official_roll10_own'] = wc_data['home_conceded_weighted_official_roll10']
-    
-    home_features['goals_official_roll5_opp'] = wc_data['away_goals_official_roll5']
-    home_features['conceded_official_roll5_opp'] = wc_data['away_conceded_official_roll5']
-    home_features['win_rate_official_roll5_opp'] = wc_data['away_win_rate_official_roll5']
-    home_features['goals_official_roll10_opp'] = wc_data['away_goals_official_roll10']
-    home_features['conceded_official_roll10_opp'] = wc_data['away_conceded_official_roll10']
-    home_features['win_rate_official_roll10_opp'] = wc_data['away_win_rate_official_roll10']
-    home_features['goals_weighted_official_roll5_opp'] = wc_data['away_goals_weighted_official_roll5']
-    home_features['conceded_weighted_official_roll5_opp'] = wc_data['away_conceded_weighted_official_roll5']
-    home_features['goals_weighted_official_roll10_opp'] = wc_data['away_goals_weighted_official_roll10']
-    home_features['conceded_weighted_official_roll10_opp'] = wc_data['away_conceded_weighted_official_roll10']
+    # 予測用特徴量の作成（own/opp 展開は features_common に一元化）
+    home_features, away_features = build_views_from_match_df(wc_data)
 
-    # 公式戦優先 ewm
-    home_features['goals_official_ewm5_own'] = wc_data['home_goals_official_ewm5']
-    home_features['conceded_official_ewm5_own'] = wc_data['home_conceded_official_ewm5']
-    home_features['win_rate_official_ewm5_own'] = wc_data['home_win_rate_official_ewm5']
-    home_features['goals_official_ewm10_own'] = wc_data['home_goals_official_ewm10']
-    home_features['conceded_official_ewm10_own'] = wc_data['home_conceded_official_ewm10']
-    home_features['win_rate_official_ewm10_own'] = wc_data['home_win_rate_official_ewm10']
-    home_features['goals_weighted_official_ewm5_own'] = wc_data['home_goals_weighted_official_ewm5']
-    home_features['conceded_weighted_official_ewm5_own'] = wc_data['home_conceded_weighted_official_ewm5']
-    home_features['goals_weighted_official_ewm10_own'] = wc_data['home_goals_weighted_official_ewm10']
-    home_features['conceded_weighted_official_ewm10_own'] = wc_data['home_conceded_weighted_official_ewm10']
-    
-    home_features['goals_official_ewm5_opp'] = wc_data['away_goals_official_ewm5']
-    home_features['conceded_official_ewm5_opp'] = wc_data['away_conceded_official_ewm5']
-    home_features['win_rate_official_ewm5_opp'] = wc_data['away_win_rate_official_ewm5']
-    home_features['goals_official_ewm10_opp'] = wc_data['away_goals_official_ewm10']
-    home_features['conceded_official_ewm10_opp'] = wc_data['away_conceded_official_ewm10']
-    home_features['win_rate_official_ewm10_opp'] = wc_data['away_win_rate_official_ewm10']
-    home_features['goals_weighted_official_ewm5_opp'] = wc_data['away_goals_weighted_official_ewm5']
-    home_features['conceded_weighted_official_ewm5_opp'] = wc_data['away_conceded_weighted_official_ewm5']
-    home_features['goals_weighted_official_ewm10_opp'] = wc_data['away_goals_weighted_official_ewm10']
-    home_features['conceded_weighted_official_ewm10_opp'] = wc_data['away_conceded_weighted_official_ewm10']
-    
-    home_features['was_home'] = wc_data['neutral'].apply(lambda x: 0 if x == 1 else 1)
-    
-    # アウェイ特徴量 (符号反転および own/opp の入れ替え)
-    away_features = pd.DataFrame()
-    away_features['elo_diff'] = -wc_data['elo_diff']
-    away_features['squad_value_diff'] = -wc_data['squad_value_diff']
-    away_features['last_wcup_matches_own'] = wc_data['away_last_wcup_matches']
-    away_features['last_wcup_matches_opp'] = wc_data['home_last_wcup_matches']
-    
-    # 実質ホームアドバンテージ
-    away_features['same_conf_own'] = wc_data['away_same_confederation']
-    away_features['same_conf_opp'] = wc_data['home_same_confederation']
-    away_features['is_host_own'] = wc_data['away_is_host']
-    away_features['is_host_opp'] = wc_data['home_is_host']
-    
-    # 基本 rolling
-    away_features['goals_roll5_own'] = wc_data['away_goals_roll5']
-    away_features['conceded_roll5_own'] = wc_data['away_conceded_roll5']
-    away_features['win_rate_roll5_own'] = wc_data['away_win_rate_roll5']
-    away_features['goals_roll10_own'] = wc_data['away_goals_roll10']
-    away_features['conceded_roll10_own'] = wc_data['away_conceded_roll10']
-    away_features['win_rate_roll10_own'] = wc_data['away_win_rate_roll10']
-    away_features['goals_weighted_roll5_own'] = wc_data['away_goals_weighted_roll5']
-    away_features['conceded_weighted_roll5_own'] = wc_data['away_conceded_weighted_roll5']
-    away_features['goals_weighted_roll10_own'] = wc_data['away_goals_weighted_roll10']
-    away_features['conceded_weighted_roll10_own'] = wc_data['away_conceded_weighted_roll10']
-    
-    away_features['goals_roll5_opp'] = wc_data['home_goals_roll5']
-    away_features['conceded_roll5_opp'] = wc_data['home_conceded_roll5']
-    away_features['win_rate_roll5_opp'] = wc_data['home_win_rate_roll5']
-    away_features['goals_roll10_opp'] = wc_data['home_goals_roll10']
-    away_features['conceded_roll10_opp'] = wc_data['home_conceded_roll10']
-    away_features['win_rate_roll10_opp'] = wc_data['home_win_rate_roll10']
-    away_features['goals_weighted_roll5_opp'] = wc_data['home_goals_weighted_roll5']
-    away_features['conceded_weighted_roll5_opp'] = wc_data['home_conceded_weighted_roll5']
-    away_features['goals_weighted_roll10_opp'] = wc_data['home_goals_weighted_roll10']
-    away_features['conceded_weighted_roll10_opp'] = wc_data['home_conceded_weighted_roll10']
-
-    # 基本 ewm
-    away_features['goals_ewm5_own'] = wc_data['away_goals_ewm5']
-    away_features['conceded_ewm5_own'] = wc_data['away_conceded_ewm5']
-    away_features['win_rate_ewm5_own'] = wc_data['away_win_rate_ewm5']
-    away_features['goals_ewm10_own'] = wc_data['away_goals_ewm10']
-    away_features['conceded_ewm10_own'] = wc_data['away_conceded_ewm10']
-    away_features['win_rate_ewm10_own'] = wc_data['away_win_rate_ewm10']
-    away_features['goals_weighted_ewm5_own'] = wc_data['away_goals_weighted_ewm5']
-    away_features['conceded_weighted_ewm5_own'] = wc_data['away_conceded_weighted_ewm5']
-    away_features['goals_weighted_ewm10_own'] = wc_data['away_goals_weighted_ewm10']
-    away_features['conceded_weighted_ewm10_own'] = wc_data['away_conceded_weighted_ewm10']
-    
-    away_features['goals_ewm5_opp'] = wc_data['home_goals_ewm5']
-    away_features['conceded_ewm5_opp'] = wc_data['home_conceded_ewm5']
-    away_features['win_rate_ewm5_opp'] = wc_data['home_win_rate_ewm5']
-    away_features['goals_ewm10_opp'] = wc_data['home_goals_ewm10']
-    away_features['conceded_ewm10_opp'] = wc_data['home_conceded_ewm10']
-    away_features['win_rate_ewm10_opp'] = wc_data['home_win_rate_ewm10']
-    away_features['goals_weighted_ewm5_opp'] = wc_data['home_goals_weighted_ewm5']
-    away_features['conceded_weighted_ewm5_opp'] = wc_data['home_conceded_weighted_ewm5']
-    away_features['goals_weighted_ewm10_opp'] = wc_data['home_goals_weighted_ewm10']
-    away_features['conceded_weighted_ewm10_opp'] = wc_data['home_conceded_weighted_ewm10']
-    
-    # 公式戦優先 rolling
-    away_features['goals_official_roll5_own'] = wc_data['away_goals_official_roll5']
-    away_features['conceded_official_roll5_own'] = wc_data['away_conceded_official_roll5']
-    away_features['win_rate_official_roll5_own'] = wc_data['away_win_rate_official_roll5']
-    away_features['goals_official_roll10_own'] = wc_data['away_goals_official_roll10']
-    away_features['conceded_official_roll10_own'] = wc_data['away_conceded_official_roll10']
-    away_features['win_rate_official_roll10_own'] = wc_data['away_win_rate_official_roll10']
-    away_features['goals_weighted_official_roll5_own'] = wc_data['away_goals_weighted_official_roll5']
-    away_features['conceded_weighted_official_roll5_own'] = wc_data['away_conceded_official_roll5']
-    away_features['goals_weighted_official_roll10_own'] = wc_data['away_goals_weighted_official_roll10']
-    away_features['conceded_weighted_official_roll10_own'] = wc_data['away_conceded_weighted_official_roll10']
-    
-    away_features['goals_official_roll5_opp'] = wc_data['home_goals_official_roll5']
-    away_features['conceded_official_roll5_opp'] = wc_data['home_conceded_official_roll5']
-    away_features['win_rate_official_roll5_opp'] = wc_data['home_win_rate_official_roll5']
-    away_features['goals_official_roll10_opp'] = wc_data['home_goals_official_roll10']
-    away_features['conceded_official_roll10_opp'] = wc_data['home_conceded_official_roll10']
-    away_features['win_rate_official_roll10_opp'] = wc_data['home_win_rate_official_roll10']
-    away_features['goals_weighted_official_roll5_opp'] = wc_data['home_goals_weighted_official_roll5']
-    away_features['conceded_weighted_official_roll5_opp'] = wc_data['home_conceded_weighted_official_roll5']
-    away_features['goals_weighted_official_roll10_opp'] = wc_data['home_goals_weighted_official_roll10']
-    away_features['conceded_weighted_official_roll10_opp'] = wc_data['home_conceded_weighted_official_roll10']
-
-    # 公式戦優先 ewm
-    away_features['goals_official_ewm5_own'] = wc_data['away_goals_official_ewm5']
-    away_features['conceded_official_ewm5_own'] = wc_data['away_conceded_official_ewm5']
-    away_features['win_rate_official_ewm5_own'] = wc_data['away_win_rate_official_ewm5']
-    away_features['goals_official_ewm10_own'] = wc_data['away_goals_official_ewm10']
-    away_features['conceded_official_ewm10_own'] = wc_data['away_conceded_official_ewm10']
-    away_features['win_rate_official_ewm10_own'] = wc_data['away_win_rate_official_ewm10']
-    away_features['goals_weighted_official_ewm5_own'] = wc_data['away_goals_weighted_official_ewm5']
-    away_features['conceded_weighted_official_ewm5_own'] = wc_data['away_conceded_official_ewm5']
-    away_features['goals_weighted_official_ewm10_own'] = wc_data['away_goals_weighted_official_ewm10']
-    away_features['conceded_weighted_official_ewm10_own'] = wc_data['away_conceded_weighted_official_ewm10']
-    
-    away_features['goals_official_ewm5_opp'] = wc_data['home_goals_official_ewm5']
-    away_features['conceded_official_ewm5_opp'] = wc_data['home_conceded_official_ewm5']
-    away_features['win_rate_official_ewm5_opp'] = wc_data['home_win_rate_official_ewm5']
-    away_features['goals_official_ewm10_opp'] = wc_data['home_goals_official_ewm10']
-    away_features['conceded_official_ewm10_opp'] = wc_data['home_conceded_official_ewm10']
-    away_features['win_rate_official_ewm10_opp'] = wc_data['home_win_rate_official_ewm10']
-    away_features['goals_weighted_official_ewm5_opp'] = wc_data['away_goals_weighted_official_ewm5']
-    away_features['conceded_weighted_official_ewm5_opp'] = wc_data['away_conceded_weighted_official_ewm5']
-    away_features['goals_weighted_official_ewm10_opp'] = wc_data['away_goals_weighted_official_ewm10']
-    away_features['conceded_weighted_official_ewm10_opp'] = wc_data['away_conceded_weighted_official_ewm10']
-    
-    away_features['was_home'] = 0
-    
     # 特徴量カラム順序保証
     home_features = home_features[feature_cols]
     away_features = away_features[feature_cols]
@@ -393,9 +201,9 @@ def main():
         
     for r_val in rho_candidates:
         ph_poi, pd_poi, pa_poi = poisson_probs[r_val]
-        p_h_final = 0.5 * ph_poi + 0.5 * p_home_cls
-        p_d_final = 0.5 * pd_poi + 0.5 * p_draw_cls
-        p_a_final = 0.5 * pa_poi + 0.5 * p_away_cls
+        p_h_final = (1 - w_cls) * ph_poi + w_cls * p_home_cls
+        p_d_final = (1 - w_cls) * pd_poi + w_cls * p_draw_cls
+        p_a_final = (1 - w_cls) * pa_poi + w_cls * p_away_cls
         
         wc_data['p_home'] = p_h_final
         wc_data['p_draw'] = p_d_final
@@ -521,9 +329,9 @@ def main():
     
     # 最適な rho を適用して最終的な予測確率とEVを確定
     ph_poi_opt, pd_poi_opt, pa_poi_opt = poisson_probs[rho_opt]
-    wc_data['p_home'] = 0.5 * ph_poi_opt + 0.5 * p_home_cls
-    wc_data['p_draw'] = 0.5 * pd_poi_opt + 0.5 * p_draw_cls
-    wc_data['p_away'] = 0.5 * pa_poi_opt + 0.5 * p_away_cls
+    wc_data['p_home'] = (1 - w_cls) * ph_poi_opt + w_cls * p_home_cls
+    wc_data['p_draw'] = (1 - w_cls) * pd_poi_opt + w_cls * p_draw_cls
+    wc_data['p_away'] = (1 - w_cls) * pa_poi_opt + w_cls * p_away_cls
     
     # 最確予測スコアの算出
     pred_home_scores = []

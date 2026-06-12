@@ -22,8 +22,8 @@ import pandas as pd
 import numpy as np
 from scipy.stats import poisson
 
-# Dixon-Coles 補正パラメータ (backtest最適値)
-RHO = -0.03
+# Dixon-Coles 補正パラメータ (walkforward 2019-2026 全試合で最適化)
+RHO = -0.09
 MAX_GOALS = 15
 
 # WINNER 18択のキーと日本語名の定義

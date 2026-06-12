@@ -24,16 +24,18 @@
 
 ### 💻 環境の構築・再現手順
 
-リポジトリ直下にある [environment.yml](file:///mnt/ssd1/home3/aiba/AI_base/football2026/environment.yml) を使用して、Conda環境を簡単に再現できます。
+リポジトリ直下にある [environment.yml](./environment.yml) を使用して、Conda環境を簡単に再現できます。
 
 **1. Conda環境の新規作成:**
 ```bash
-conda env create -f environment.yml
+conda env create -f environment.yml -n wcup_winner
+# macOS (Apple Silicon/Intel) で lightgbm が libomp.dylib エラーになる場合:
+conda install -n wcup_winner -c conda-forge llvm-openmp -y
 ```
 
 **2. 環境のアクティベート:**
 ```bash
-conda activate AI_base
+conda activate wcup_winner
 ```
 
 **3. （参考）既存環境への一括インストール:**
@@ -47,7 +49,7 @@ pip install pandas==2.3.3 numpy==2.2.5 scikit-learn==1.7.2 lightgbm==4.6.0 optun
 ## ファイル構成
 
 ```text
-football2026/
+wcup_winner/
 ├── README.md
 ├── src/
 │   ├── pipeline/                      # コアパイプライン（データ収集〜学習）
@@ -60,8 +62,9 @@ football2026/
 │   │   ├── prepare_odds_2018.py       # 2018年ロシアW杯オッズ（全64試合手動定義）
 │   │   ├── prepare_odds_2026_groups.py# 2026年グループステージオッズ（実値+推定値）
 │   │   └── fetch_odds_2026.py         # The-Odds-APIによる実オッズの自動取得
-│   ├── backtest/                      # バックテスト
-│   │   └── backtest.py                # --year 2018/2022 で大会切替
+│   ├── backtest/                      # バックテスト・検証
+│   │   ├── backtest.py                # --year 2018/2022 で大会切替
+│   │   └── walkforward.py             # 時系列ウォークフォワード検証・パラメータ調整
 │   └── predict/                       # 予測・シミュレーション・推奨
 │       ├── simulator.py               # 2022年大会 32カ国モンテカルロ
 │       ├── simulator_2026.py          # 2026年大会 48カ国対応モンテカルロ
@@ -73,14 +76,18 @@ football2026/
 │   ├── buy_status.csv                 # WINNER 購入履歴・結果ステータス管理
 │   ├── raw/
 │   │   ├── match/                     # 試合結果データ
-│   │   │   ├── results.csv            # 全国際Aマッチ結果（2026-06-10まで）
+│   │   │   ├── results.csv            # 全国際Aマッチ結果（download_data.pyで随時更新）
 │   │   │   └── shootouts.csv          # PK戦結果
 │   │   ├── odds/                      # オッズデータ
 │   │   │   ├── odds_qatar2022.csv
 │   │   │   ├── odds_russia2018.csv
-│   │   │   └── odds_groups_2026.csv   # ★試合前に実際のオッズに更新推奨
-│   │   └── squad/
-│   │       └── squad_values_2022.csv  # 選手総市場価値データ
+│   │   │   ├── odds_groups_2026.csv   # ★試合前に fetch_odds_2026.py で実オッズに更新
+│   │   │   └── winner_inputs/         # WINNER 18択オッズの手入力CSV
+│   │   └── squad/                     # 選手総市場価値データ（大会世代別）
+│   │       ├── squad_values_2018.csv
+│   │       ├── squad_values_2022.csv
+│   │       ├── squad_values_2026.csv
+│   │       └── squad_penalties_2026.csv # ★主力離脱時に team,multiplier,reason を記入（例: 0.85）
 │   └── processed/
 │       ├── features.csv               # 特徴量（全大会共通）
 │       ├── results_with_elo.csv       # Elo付き試合結果
@@ -123,37 +130,64 @@ python src/elo.py
 python src/preprocess.py
 
 # 4. 予測モデルの学習・保存（Poisson + LightGBM, Optunaチューニング）
-python src/train_model.py
+# 本番用: 全データで学習 → models/ に保存（デフォルト）
+python src/pipeline/train_model.py
+# バックテスト用: 大会開幕前まで学習し専用ディレクトリに保存（本番モデルと共存できる）
+python src/pipeline/train_model.py --train_end 2018-06-14 --model_dir models/backtest_2018
+python src/pipeline/train_model.py --train_end 2022-11-20 --model_dir models/backtest_2022
 ```
 
 ### バックテスト（2018年 / 2022年大会）
 
+バックテストは `models/backtest_{year}/` が存在すれば自動でそれを使用します（リーク防止）。
+無い場合は本番モデルにフォールバックし、警告を表示します。
+
 ```bash
 # 2022年カタール大会
-python src/prepare_odds.py
-python src/backtest.py --year 2022
+python src/odds/prepare_odds.py
+python src/backtest/backtest.py --year 2022
 
 # 2018年ロシア大会
-python src/prepare_odds_2018.py
-python src/backtest.py --year 2018
+python src/odds/prepare_odds_2018.py
+python src/backtest/backtest.py --year 2018
+```
+
+### ウォークフォワード検証（パラメータ調整）
+
+W杯2大会(128試合)では差が小さいパラメータはノイズに埋もれるため、
+全国際試合で「その年より前のデータで学習 → その年を予測」を繰り返して大サンプルで評価します。
+
+```bash
+python src/backtest/walkforward.py --mode probs   # Dixon-Coles ρ × 分類器ブレンド比
+python src/backtest/walkforward.py --mode shrink  # 市場シュリンク比（probsの後に実行）
+python src/backtest/walkforward.py --mode elo     # Elo Kスケール × ホーム補正
 ```
 
 ### 2026年大会 予測・シミュレーション
 
 ```bash
-# グループステージ全72試合のスコア予測
-python src/predict_scores_2026.py
+# グループステージ全72試合のスコア予測（1X2確率は Poisson行列×分類器のブレンド, --cls_blend で調整可）
+python src/predict/predict_scores_2026.py
 
 # 48カ国 優勝確率シミュレーション（1万回モンテカルロ）
-python src/simulator_2026.py
+python src/predict/simulator_2026.py
 
 # ベッティング推奨（EV・ケリー計算）
-python src/prepare_odds_2026_groups.py     # 推定オッズCSVの初期生成
-python src/odds/fetch_odds_2026.py         # APIから最新の実オッズをダウンロードして更新
-python src/bet_advisor_2026.py --ev_thresh 1.05 --kelly half --bankroll 100
+python src/odds/prepare_odds_2026_groups.py # 推定オッズCSVの初期生成
+python src/odds/fetch_odds_2026.py          # APIから最新の実オッズをダウンロードして更新
+# --market_blend: モデル確率を市場確率へシュリンクする比率（EV過大評価の抑制, default 0.3）
+# --max_ev: サニティ上限。超過分はデータ異常の疑いとして警告・除外（default 2.0）
+python src/predict/bet_advisor_2026.py --ev_thresh 1.05 --kelly half --bankroll 100
 
-# WINNERの個別試合 18択期待値の計算 (対話型、またはCSV入力)
+# WINNERの個別試合 18択期待値の計算
+# (1) オッズ入力用テンプレートの生成（初回のみ。生成したCSVのodds列にWINNERのオッズを記入する）
+python src/predict/calculate_winner_ev_general.py --generate_template data/raw/odds/winner_inputs/03_winner_xxx_yyy.csv
+# (2) CSV入力で計算 → data/processed/2026/winner_matches/<連番>_winner_<home>_<away>_ev.csv に出力
+python src/predict/calculate_winner_ev_general.py --home Mexico --away "South Africa" \
+    --odds_csv data/raw/odds/winner_inputs/01_winner_mexico_south_africa.csv
+# (3) または対話型でオッズを直接入力
 python src/predict/calculate_winner_ev_general.py --home Mexico --away "South Africa"
+# ※ λ（期待得点）は predicted_scores.csv から読むため、モデル更新後は predict_scores_2026.py を先に実行すること
 
 # WINNER購入結果の自動精算・ROI集計
 python src/predict/settle_bets_2026.py
@@ -170,14 +204,29 @@ python src/predict/settle_bets_2026.py
 | Poisson Regression | Ridge正則化 Poisson | 期待得点（λ）の線形推定 |
 | LightGBM (Regressor) | Poisson目的関数 + Optuna CV最適化 | 非線形特徴量から期待得点を推定 |
 | LightGBM (Classifier) | 3クラス分類 (H/D/A) | 勝敗確率の直接推定 |
-| **Ensemble** | (Poisson + LGBM) / 2 | 安定した期待得点を最終出力 |
+| **期待得点 Ensemble** | (Poisson + LGBM) / 2 | 安定した期待得点を出力 |
+| **1X2確率 Blend** | 0.75×Dixon-Coles行列 + 0.25×分類器 | 最終的な勝敗確率（バックテスト・2026年予測で共通） |
 
-### 主要特徴量（49個）
+> ブレンド比0.25とDixon-Coles ρ=-0.09 は、ウォークフォワード検証（2019〜2026年の全国際試合 7,183試合で
+> 「その年より前のデータのみで学習→その年を予測」）のLog Loss最小値（`--cls_blend` で変更可）。
+> ベッティング推奨時はさらに、マージン除去済みの市場インプライド確率と混合（`--market_blend`, デフォルト0.5）してEVの過大評価を抑制する。
+
+### モンテカルロ・シミュレーション（2026年）
+
+- **FIFA公式ノックアウトブラケット**を実装（R32の16試合スロット＋ベスト3位の許容グループ制約を
+  バックトラッキングで充足。全495通りの3位組み合わせで検証済み）
+- ノックアウトの同点時は **延長戦（λ×1/3のPoisson）→ PK戦（50/50）** で決着
+- 開催国（米加墨）の自国開催試合には `was_home=1` を適用
+- Elo の K値はウォークフォワード評価により旧値×1.2 に調整（ホーム補正は+100を維持）
+
+### 主要特徴量（93個）
 
 - **Elo Rating差** (試合前時点、対戦相手調整済み)
-- **選手総市場価値差** (squad_value_diff)
+- **選手総市場価値差** (squad_value_diff) と **欠損フラグ** (squad_value_missing, 欠損時は50M€で補完)
 - **直近n試合rolling統計** (得点/失点/勝率 × roll5/roll10/ewm5/ewm10 × 全試合/公式戦)
-- **W杯出場経験** (last_wcup_matches)
+- **休養日数** (rest_days, 前試合からの日数・上限30日)
+- **W杯出場経験** (last_wcup_matches, 2022年大会まで反映)
+- **実質ホームアドバンテージ** (same_confederation / is_host, 全FIFA加盟国+歴史的代表をカバーする連盟辞書に基づく)
 - **ホームゲーム識別フラグ** (was_home)
 
 ### Dixon-Coles補正
@@ -188,85 +237,99 @@ python src/predict/settle_bets_2026.py
 
 ## 主要な成果
 
+※ 数値は特徴量バグ修正・新特徴量（休養日数・市場価値欠損フラグ）・調整済みパラメータ
+（Elo K×1.2, 1X2ブレンド0.25）による 2026-06-12 再計測。**両大会とも開幕前カットオフのモデル**
+（2018年: 2018-06-14 / 2022年: 2022-11-20, `models/backtest_{year}/`）を使用したリークなしの評価。
+
 ### バックテスト比較 (2018年 vs 2022年)
 
 | 指標 | 2018年 ロシア大会 | 2022年 カタール大会 |
 |:---|:---:|:---:|
-| **平均 Log Loss** | **0.93936** | 1.04153 |
-| **平均 Brier Score** | **0.55737** | 0.60710 |
-| **定額ベット ROI (EV>1.20)** | **189.70%** | 202.84% |
-| **Half-Kelly 最終資金** | **470.37** | 457.71 |
+| **平均 Log Loss** | **0.95790** | 1.04704 |
+| **平均 Brier Score** | **0.56900** | 0.61282 |
+| **定額ベット ROI (EV>1.20)** | 141.67% | **278.79%** |
+| **Half-Kelly 最終資金** | 263.07 | **446.43** |
 
 > 2018年大会はLog Loss・Brier Score共に優秀。2022年大会はアップセット（日本のドイツ/スペイン撃破等）が多かった分、確率予測の難易度が高かった。
+> 2018年は学習データが2015〜2018年の約3年分しかないため、ベットROIは2022年より控えめ。
+> 大サンプルでの較正評価はウォークフォワード検証を参照（2019-2026年 7,183試合で Log Loss 0.857）。
 
 ### 2022年カタール大会 バックテスト詳細
 
 #### A. 定額ベット戦略 (1.0ユニット)
 | EV閾値 | ベット数 | 回収率 |
 |:---:|:---:|:---:|
-| EV > 1.00 | 61 | **164.41%** |
-| EV > 1.05 | 48 | **184.29%** |
-| EV > 1.10 | 39 | **217.13%** |
-| EV > 1.15 | 34 | **221.88%** |
-| EV > 1.25 | 29 | **223.83%** |
+| EV > 1.00 | 60 | **202.23%** |
+| EV > 1.05 | 51 | **214.82%** |
+| EV > 1.10 | 42 | **231.36%** |
+| EV > 1.15 | 35 | **262.86%** |
+| EV > 1.25 | 29 | **291.38%** |
 
 #### B. ケリー基準動的ベット戦略 (初期資金100.0)
 | 戦略 | 最終資金 | 回収率 |
 |:---:|:---:|:---:|
-| Full Kelly (上限20%) | 971.94 | **172.26%** |
-| Half Kelly (上限10%) | 457.71 | **188.62%** |
-| Quarter Kelly (上限5%) | 246.12 | **196.20%** |
+| Full Kelly (上限20%) | 826.82 | **144.18%** |
+| Half Kelly (上限10%) | 446.43 | **165.54%** |
+| Quarter Kelly (上限5%) | 247.21 | **179.52%** |
 
 ### 日本代表 スコア予測精度 (2022年)
 
 | 試合 | 予測スコア | 実際 | 結果 |
 |:---|:---:|:---:|:---:|
 | ドイツ vs 日本 | 1-0 | 1-2 | 日本勝利🎉 |
-| 日本 vs コスタリカ | 1-1 | 0-1 | 日本敗北 |
+| 日本 vs コスタリカ | 1-0 | 0-1 | 日本敗北 |
 | 日本 vs スペイン | 0-1 | 2-1 | 日本勝利🎉 |
 | 日本 vs クロアチア | **1-1** | **1-1** | **的中🎯** |
 
 ---
 
-## 2026年大会 予測結果（2025年11月データ基準）
+## 2026年大会 予測結果（2026年6月11日データ基準・大会開幕時点）
 
 ### 大会フォーマット
 - **48チーム** / **12グループ×4チーム** / グループ上位2+ベスト3位8チームがR32進出
 - **総試合数:** 104試合（グループステージ72 + ノックアウト32）
 - **開催国:** アメリカ・カナダ・メキシコ（3カ国）
 
-### 優勝確率シミュレーション TOP 10（1万回）
+### 優勝確率シミュレーション TOP 12（1万回・公式ブラケット使用）
 
 | 順位 | チーム | グループ | Elo | 決勝進出 | **優勝確率** |
 |:---:|:---|:---:|:---:|:---:|:---:|
-| 1 | 🇦🇷 アルゼンチン | J | 2069 | 21.3% | **12.00%** |
-| 2 | 🇫🇷 フランス | I | 2044 | 18.1% | **10.24%** |
-| 3 | 🇪🇸 スペイン | H | 2041 | 17.2% | **9.57%** |
-| 4 | 🇧🇷 ブラジル | C | 2038 | 16.4% | **8.91%** |
-| 5 | 🏴󠁧󠁢󠁥󠁮󠁧󠁿 イングランド | L | 2026 | 15.4% | **8.31%** |
-| 6 | 🇳🇱 オランダ | F | 2026 | 14.8% | **7.93%** |
-| 7 | 🇩🇪 ドイツ | E | 2022 | 12.4% | **6.38%** |
-| 8 | 🇵🇹 ポルトガル | K | 2054 | 12.1% | **6.23%** |
-| 9 | 🇯🇵 **日本** | **F** | 1953 | 6.1% | **2.68%** |
-| - | 🇺🇸 アメリカ | D | 2050 | 7.2% | 3.16% |
+| 1 | 🇪🇸 スペイン | H | 2176 | 32.7% | **22.86%** |
+| 2 | 🇫🇷 フランス | I | 2095 | 17.5% | **10.60%** |
+| 3 | 🇦🇷 アルゼンチン | J | 2154 | 17.8% | **9.77%** |
+| 4 | 🇧🇷 ブラジル | C | 2033 | 15.6% | **8.45%** |
+| 5 | 🏴󠁧󠁢󠁥󠁮󠁧󠁿 イングランド | L | 2064 | 14.9% | **7.45%** |
+| 6 | 🇨🇴 コロンビア | K | 2028 | 12.6% | **6.35%** |
+| 7 | 🇲🇽 メキシコ | A | 1957 | 10.0% | **4.67%** |
+| 8 | 🇩🇪 ドイツ | E | 1972 | 8.2% | **3.57%** |
+| 9 | 🇵🇹 ポルトガル | K | 1993 | 8.0% | **3.52%** |
+| 10 | 🇳🇱 オランダ | F | 1988 | 6.5% | **2.75%** |
+| - | 🇯🇵 **日本** | **F** | 1964 | 3.9% | **1.50%** |
+| - | 🇺🇸 アメリカ | D | 1813 | 3.0% | 0.99% |
+
+> 開催国の `was_home` 適用と公式ブラケットの導入により、メキシコ（7位, 4.67%）など開催国の評価が上昇。
 
 ### 🇯🇵 グループF 日本代表 スコア予測
 
 | 試合 | 予測スコア | 期待得点 | 日本勝率 |
 |:---|:---:|:---:|:---:|
-| **オランダ vs 日本** (6/14) | **1-1** | 1.21 - 1.24 | **36.8%** (日本有利!) |
-| **日本 vs チュニジア** (6/21) | **2-0** | 1.97 - 0.74 | **66.5%** |
-| **日本 vs スウェーデン** (6/25) | **1-1** | 1.44 - 1.25 | **42.8%** |
+| **オランダ vs 日本** (6/14) | **1-1** | 1.46 - 1.13 | **27.6%** (引き分け28.6%) |
+| **日本 vs チュニジア** (6/20) | **1-1** | 1.73 - 0.87 | **57.6%** |
+| **日本 vs スウェーデン** (6/25) | **1-1** | 1.82 - 0.93 | **58.1%** |
 
-> R32（グループ突破）確率: **89.7%** / R16進出確率: **47.8%**
+> R32（グループ突破）確率: **85.3%** / R16進出確率: **41.3%**
 
-### 2026年ベッティング推奨（実オッズ確認済み）
+### 2026年ベッティング推奨の例（全72試合 実オッズ・市場シュリンク0.5適用後）
 
 | 試合 | 賭けタイプ | オッズ | **EV** |
 |:---|:---|:---:|:---:|
-| 韓国 vs チェコ (6/11) | 韓国勝利 | 2.75 | **1.350** |
-| 韓国 vs チェコ (6/11) | DC 1X | 1.49 | **1.120** |
-| オランダ vs 日本 (6/14) | 日本勝利 | 3.60 | **1.084** |
+| ブラジル vs ハイチ (6/13) | ハイチ勝利 | 28.89 | **1.819** |
+| ノルウェー vs イラク (6/17) | DC X2 | 4.84 | **1.512** |
+| 日本 vs スウェーデン (6/25) | 日本勝利 | 2.07 | **1.070** |
+
+> EVが2.0を超える推奨はサニティチェックで自動除外される（オッズデータ異常の疑い）。
+> 弱小国相手の高オッズには依然高EVが出やすい（モデルと市場の見解相違）。
+> 実際の購入は「ベッティング戦略と資金管理ガイド」のEV閾値・ケリー基準に従うこと。
 
 ---
 
@@ -276,12 +339,15 @@ python src/predict/settle_bets_2026.py
 
 ```bash
 # 最新データ取得 → Elo再計算 → 特徴量更新 → 予測更新
-python src/download_data.py && python src/elo.py && python src/preprocess.py
-python src/predict_scores_2026.py   # スコア予測更新
-python src/simulator_2026.py        # 優勝確率更新
-python src/odds/fetch_odds_2026.py  # 実オッズの最新化
-python src/bet_advisor_2026.py      # ベッティング推奨更新
-python src/predict/settle_bets_2026.py  # WINNER購入結果の自動精算とROI確認
+python src/pipeline/download_data.py && python src/pipeline/elo.py && python src/pipeline/preprocess.py
+python src/predict/predict_scores_2026.py   # スコア予測更新
+python src/predict/simulator_2026.py        # 優勝確率更新
+python src/odds/fetch_odds_2026.py          # 実オッズの最新化
+python src/predict/bet_advisor_2026.py      # ベッティング推奨更新
+python src/predict/settle_bets_2026.py      # WINNER購入結果の自動精算とROI確認
+
+# （任意・推奨）まとまった試合数が消化されたらモデル自体も再学習
+python src/pipeline/train_model.py
 ```
 
 ---

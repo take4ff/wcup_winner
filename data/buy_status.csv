@@ -1,3 +1,5 @@
-date,home_team,away_team,selection,odds,buy_amount_yen,result_amount_yen,status
-2026-06-11,Mexico,South Africa,0-0,10.2,600,,pending
-2026-06-11,South Korea,Czech Republic,South Korea その他,23.3,600,,pending
+date,home_team,away_team,selection,odds,Probability(%),buy_amount_yen,match_result,result_amount_yen,status
+2026-06-11,Mexico,South Africa,0-0,10.2,10.49,600,2-0,0,lost
+2026-06-11,South Korea,Czech Republic,South Korea その他,23.3,7.0,600,2-1,0,lost
+2026-06-12,Canada,bosnia and herzegovina,Canada その他,13.9,14.11,600,,,
+2026-06-12,United States,Paraguay,paraguay その他,35.2,2.82,0

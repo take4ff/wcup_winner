@@ -4,21 +4,23 @@ import numpy as np
 from collections import defaultdict
 
 def get_k_factor(tournament):
+    # K値は walkforward.py --mode elo のグリッド評価で旧値×1.2が最良だったため調整済み
+    # (2000年以降の全試合で Brier 0.13413 → 0.13397)
     tournament = str(tournament).lower()
     if 'world cup' in tournament:
         if 'qualification' in tournament or 'qualifiers' in tournament:
-            return 30
+            return 36
         else:
-            return 50  # W杯本大会は高く設定
+            return 60  # W杯本大会は高く設定
     elif 'euro' in tournament or 'copa' in tournament or 'asian cup' in tournament or 'africa cup' in tournament or 'gold cup' in tournament:
         if 'qualification' in tournament or 'qualifiers' in tournament:
-            return 30
+            return 36
         else:
-            return 40  # 大陸選手権本大会
+            return 48  # 大陸選手権本大会
     elif 'friendly' in tournament:
-        return 10  # 親善試合は低く設定
+        return 12  # 親善試合は低く設定
     else:
-        return 20  # その他
+        return 24  # その他
 
 def get_goal_difference_multiplier(home_score, away_score):
     d = abs(home_score - away_score)

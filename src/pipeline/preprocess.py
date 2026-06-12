@@ -2,10 +2,12 @@ import os
 import pandas as pd
 import numpy as np
 
-# 主要国の所属連盟（Confederation）定義
+# 所属連盟（Confederation）定義
+# 全FIFA加盟国 + 歴史的代表（消滅国）+ 連盟管轄の準加盟地域をカバーする。
+# CONIFA等の非公式代表（Padania, Sealand など）は意図的に 'Other' のまま。
 CONFEDERATIONS = {
     # UEFA (ヨーロッパ)
-    'France': 'UEFA', 'Germany': 'UEFA', 'Spain': 'UEFA', 'England': 'UEFA', 
+    'France': 'UEFA', 'Germany': 'UEFA', 'Spain': 'UEFA', 'England': 'UEFA',
     'Belgium': 'UEFA', 'Croatia': 'UEFA', 'Denmark': 'UEFA', 'Netherlands': 'UEFA',
     'Switzerland': 'UEFA', 'Portugal': 'UEFA', 'Poland': 'UEFA', 'Serbia': 'UEFA',
     'Wales': 'UEFA', 'Italy': 'UEFA', 'Sweden': 'UEFA', 'Ukraine': 'UEFA',
@@ -13,6 +15,17 @@ CONFEDERATIONS = {
     'Czech Republic': 'UEFA', 'Hungary': 'UEFA', 'Slovakia': 'UEFA', 'Romania': 'UEFA',
     'Norway': 'UEFA', 'Greece': 'UEFA', 'Republic of Ireland': 'UEFA', 'Northern Ireland': 'UEFA',
     'Finland': 'UEFA', 'Iceland': 'UEFA', 'Bosnia and Herzegovina': 'UEFA',
+    'Albania': 'UEFA', 'Andorra': 'UEFA', 'Armenia': 'UEFA', 'Azerbaijan': 'UEFA',
+    'Belarus': 'UEFA', 'Bulgaria': 'UEFA', 'Cyprus': 'UEFA', 'Estonia': 'UEFA',
+    'Faroe Islands': 'UEFA', 'Georgia': 'UEFA', 'Gibraltar': 'UEFA', 'Israel': 'UEFA',
+    'Kazakhstan': 'UEFA', 'Kosovo': 'UEFA', 'Latvia': 'UEFA', 'Liechtenstein': 'UEFA',
+    'Lithuania': 'UEFA', 'Luxembourg': 'UEFA', 'Malta': 'UEFA', 'Moldova': 'UEFA',
+    'Montenegro': 'UEFA', 'North Macedonia': 'UEFA', 'San Marino': 'UEFA', 'Slovenia': 'UEFA',
+    # UEFA: 歴史的代表
+    'Czechoslovakia': 'UEFA', 'Yugoslavia': 'UEFA', 'FR Yugoslavia': 'UEFA',
+    'Serbia and Montenegro': 'UEFA', 'German DR': 'UEFA', 'Soviet Union': 'UEFA',
+    'Ireland': 'UEFA', 'Irish Free State': 'UEFA', 'Éire': 'UEFA',
+    'Bohemia': 'UEFA', 'Bohemia and Moravia': 'UEFA', 'Saarland': 'UEFA',
     # CONMEBOL (南米)
     'Brazil': 'CONMEBOL', 'Argentina': 'CONMEBOL', 'Uruguay': 'CONMEBOL', 'Ecuador': 'CONMEBOL',
     'Colombia': 'CONMEBOL', 'Chile': 'CONMEBOL', 'Peru': 'CONMEBOL', 'Paraguay': 'CONMEBOL',
@@ -21,15 +34,64 @@ CONFEDERATIONS = {
     'Japan': 'AFC', 'South Korea': 'AFC', 'Iran': 'AFC', 'Saudi Arabia': 'AFC',
     'Australia': 'AFC', 'Qatar': 'AFC', 'China': 'AFC', 'Iraq': 'AFC', 'UAE': 'AFC',
     'Uzbekistan': 'AFC', 'Oman': 'AFC', 'Jordan': 'AFC', 'Syria': 'AFC', 'Vietnam': 'AFC',
+    'Afghanistan': 'AFC', 'Bahrain': 'AFC', 'Bangladesh': 'AFC', 'Bhutan': 'AFC',
+    'Brunei': 'AFC', 'Cambodia': 'AFC', 'Hong Kong': 'AFC', 'India': 'AFC',
+    'Indonesia': 'AFC', 'Kuwait': 'AFC', 'Kyrgyzstan': 'AFC', 'Laos': 'AFC',
+    'Lebanon': 'AFC', 'Macau': 'AFC', 'Malaysia': 'AFC', 'Maldives': 'AFC',
+    'Mongolia': 'AFC', 'Myanmar': 'AFC', 'Nepal': 'AFC', 'North Korea': 'AFC',
+    'Pakistan': 'AFC', 'Palestine': 'AFC', 'Philippines': 'AFC', 'Singapore': 'AFC',
+    'Sri Lanka': 'AFC', 'Taiwan': 'AFC', 'Tajikistan': 'AFC', 'Thailand': 'AFC',
+    'Timor-Leste': 'AFC', 'Turkmenistan': 'AFC', 'United Arab Emirates': 'AFC',
+    'Yemen': 'AFC', 'Guam': 'AFC', 'Northern Mariana Islands': 'AFC',
+    # AFC: 歴史的代表
+    'Burma': 'AFC', 'Ceylon': 'AFC', 'Malaya': 'AFC', 'North Vietnam': 'AFC',
+    'Vietnam Republic': 'AFC', 'Yemen AR': 'AFC', 'Yemen DPR': 'AFC', 'South Yemen': 'AFC',
     # CAF (アフリカ)
     'Senegal': 'CAF', 'Morocco': 'CAF', 'Tunisia': 'CAF', 'Cameroon': 'CAF',
     'Ghana': 'CAF', 'Egypt': 'CAF', 'Nigeria': 'CAF', 'Algeria': 'CAF',
     'Ivory Coast': 'CAF', 'South Africa': 'CAF', 'Mali': 'CAF', 'Burkina Faso': 'CAF',
     'DR Congo': 'CAF', 'Guinea': 'CAF', 'Angola': 'CAF',
+    'Benin': 'CAF', 'Botswana': 'CAF', 'Burundi': 'CAF', 'Cape Verde': 'CAF',
+    'Central African Republic': 'CAF', 'Chad': 'CAF', 'Comoros': 'CAF', 'Congo': 'CAF',
+    'Djibouti': 'CAF', 'Equatorial Guinea': 'CAF', 'Eritrea': 'CAF', 'Eswatini': 'CAF',
+    'Ethiopia': 'CAF', 'Gabon': 'CAF', 'Gambia': 'CAF', 'Guinea-Bissau': 'CAF',
+    'Kenya': 'CAF', 'Lesotho': 'CAF', 'Liberia': 'CAF', 'Libya': 'CAF',
+    'Madagascar': 'CAF', 'Malawi': 'CAF', 'Mauritania': 'CAF', 'Mauritius': 'CAF',
+    'Mozambique': 'CAF', 'Namibia': 'CAF', 'Niger': 'CAF', 'Rwanda': 'CAF',
+    'Seychelles': 'CAF', 'Sierra Leone': 'CAF', 'Somalia': 'CAF', 'South Sudan': 'CAF',
+    'Sudan': 'CAF', 'São Tomé and Príncipe': 'CAF', 'Tanzania': 'CAF', 'Togo': 'CAF',
+    'Uganda': 'CAF', 'Zambia': 'CAF', 'Zimbabwe': 'CAF',
+    'Réunion': 'CAF', 'Zanzibar': 'CAF',
+    # CAF: 歴史的代表
+    'Belgian Congo': 'CAF', 'Congo-Kinshasa': 'CAF', 'Zaïre': 'CAF', 'Dahomey': 'CAF',
+    'French Somaliland': 'CAF', 'Gold Coast': 'CAF', 'Northern Rhodesia': 'CAF',
+    'Southern Rhodesia': 'CAF', 'Nyasaland': 'CAF', 'Swaziland': 'CAF',
+    'Tanganyika': 'CAF', 'Upper Volta': 'CAF', 'United Arab Republic': 'CAF',
     # CONCACAF (北中米・カリブ海)
     'United States': 'CONCACAF', 'Mexico': 'CONCACAF', 'Canada': 'CONCACAF', 'Costa Rica': 'CONCACAF',
     'Honduras': 'CONCACAF', 'Jamaica': 'CONCACAF', 'Panama': 'CONCACAF', 'El Salvador': 'CONCACAF',
-    'Trinidad and Tobago': 'CONCACAF'
+    'Trinidad and Tobago': 'CONCACAF',
+    'Anguilla': 'CONCACAF', 'Antigua and Barbuda': 'CONCACAF', 'Aruba': 'CONCACAF',
+    'Bahamas': 'CONCACAF', 'Barbados': 'CONCACAF', 'Belize': 'CONCACAF',
+    'Bermuda': 'CONCACAF', 'Bonaire': 'CONCACAF', 'British Virgin Islands': 'CONCACAF',
+    'Cayman Islands': 'CONCACAF', 'Cuba': 'CONCACAF', 'Curaçao': 'CONCACAF',
+    'Dominica': 'CONCACAF', 'Dominican Republic': 'CONCACAF', 'French Guiana': 'CONCACAF',
+    'Grenada': 'CONCACAF', 'Guadeloupe': 'CONCACAF', 'Guatemala': 'CONCACAF',
+    'Guyana': 'CONCACAF', 'Haiti': 'CONCACAF', 'Martinique': 'CONCACAF',
+    'Montserrat': 'CONCACAF', 'Nicaragua': 'CONCACAF', 'Puerto Rico': 'CONCACAF',
+    'Saint Kitts and Nevis': 'CONCACAF', 'Saint Lucia': 'CONCACAF', 'Saint Martin': 'CONCACAF',
+    'Saint Vincent and the Grenadines': 'CONCACAF', 'Sint Maarten': 'CONCACAF',
+    'Suriname': 'CONCACAF', 'Turks and Caicos Islands': 'CONCACAF',
+    'United States Virgin Islands': 'CONCACAF',
+    # CONCACAF: 歴史的代表
+    'British Guiana': 'CONCACAF', 'Dutch Guyana': 'CONCACAF',
+    # OFC (オセアニア)
+    'New Zealand': 'OFC', 'Fiji': 'OFC', 'New Caledonia': 'OFC', 'Papua New Guinea': 'OFC',
+    'Samoa': 'OFC', 'American Samoa': 'OFC', 'Solomon Islands': 'OFC', 'Tahiti': 'OFC',
+    'Tonga': 'OFC', 'Vanuatu': 'OFC', 'Cook Islands': 'OFC', 'Kiribati': 'OFC',
+    'Niue': 'OFC', 'Tuvalu': 'OFC',
+    # OFC: 歴史的代表
+    'New Hebrides': 'OFC', 'Western Samoa': 'OFC',
 }
 
 def get_confederation(country_name):
@@ -47,12 +109,13 @@ def create_features():
     df = df.sort_values(by='date').reset_index(drop=True)
     
     # 直近のW杯の終了日の定義と、過去大会の各チーム試合数の集計
-    wcup_years = [2006, 2010, 2014, 2018]
+    wcup_years = [2006, 2010, 2014, 2018, 2022]
     wcup_end_dates = {
         2006: pd.to_datetime('2006-07-09'),
         2010: pd.to_datetime('2010-07-11'),
         2014: pd.to_datetime('2014-07-13'),
         2018: pd.to_datetime('2018-07-15'),
+        2022: pd.to_datetime('2022-12-18'),
     }
     wcup_stats = {}
     for year in wcup_years:
@@ -245,9 +308,32 @@ def create_features():
     # 再結合
     df_features = pd.concat([df_part_2018, df_part_2022, df_part_2026], ignore_index=True)
     df_features = df_features.sort_values(by='date').reset_index(drop=True)
-    
-    df_features['home_squad_value'] = df_features['home_squad_value'].fillna(150.0)
-    df_features['away_squad_value'] = df_features['away_squad_value'].fillna(150.0)
+
+    # 市場価値の欠損フラグ（モデルに「データなし」を明示する）と控えめなデフォルト値
+    # ※ 市場価値ファイルは主にW杯出場国を収録しているため、欠損＝中堅以下の国が大半。
+    #    一律150M€は弱小国を過大評価するため 50M€ に変更。
+    df_features['home_squad_value_missing'] = df_features['home_squad_value'].isna().astype(int)
+    df_features['away_squad_value_missing'] = df_features['away_squad_value'].isna().astype(int)
+    df_features['home_squad_value'] = df_features['home_squad_value'].fillna(50.0)
+    df_features['away_squad_value'] = df_features['away_squad_value'].fillna(50.0)
+
+    # 休養日数（前試合からの経過日数, 上限30日, 初出場は30日扱い）
+    print("Adding rest-day features...")
+    appearances = pd.concat([
+        df_features[['date', 'home_team']].rename(columns={'home_team': 'team'}),
+        df_features[['date', 'away_team']].rename(columns={'away_team': 'team'}),
+    ]).drop_duplicates().sort_values(['team', 'date'])
+    appearances['rest_days'] = appearances.groupby('team')['date'].diff().dt.days
+    appearances['rest_days'] = appearances['rest_days'].clip(upper=30).fillna(30.0)
+
+    df_features = df_features.merge(
+        appearances.rename(columns={'team': 'home_team', 'rest_days': 'home_rest_days'}),
+        on=['date', 'home_team'], how='left')
+    df_features = df_features.merge(
+        appearances.rename(columns={'team': 'away_team', 'rest_days': 'away_rest_days'}),
+        on=['date', 'away_team'], how='left')
+    df_features['home_rest_days'] = df_features['home_rest_days'].fillna(30.0)
+    df_features['away_rest_days'] = df_features['away_rest_days'].fillna(30.0)
     
     # 実質ホームアドバンテージ（連盟一致・開催国）の追加
     print("Adding confederation and host features...")

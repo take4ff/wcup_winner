@@ -85,6 +85,12 @@ def main():
     parser.add_argument('--kelly',     type=str,   default='half', choices=['full','half','quarter'], help='ケリー倍率')
     parser.add_argument('--bankroll',  type=float, default=100.0, help='初期資金 (units)')
     parser.add_argument('--top',       type=int,   default=30,    help='出力する推奨賭け数の上限')
+    parser.add_argument('--max_ev',    type=float, default=2.0,
+                        help='EVサニティ上限。これを超えるEVはデータ異常（オッズの並び違い等）の疑いが強いため警告して除外 (default: 2.0)')
+    parser.add_argument('--market_blend', type=float, default=0.5,
+                        help='モデル確率を市場インプライド確率(マージン除去済み)へシュリンクする比率。'
+                             '0=モデルのみ, 1=市場のみ。EV過大評価とケリー賭け金の暴れを抑制 '
+                             '(default: 0.5, walkforwardのW杯オッズ評価で0.4-0.7が最良域)')
     args = parser.parse_args()
 
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
@@ -101,10 +107,16 @@ def main():
     df_model['key'] = df_model.apply(lambda r: make_key(r['home_team'], r['away_team']), axis=1)
     df_odds['key']  = df_odds.apply( lambda r: make_key(r['home_team'], r['away_team']), axis=1)
 
-    df = df_model.merge(df_odds[['key','odds_home','odds_draw','odds_away','source']],
-                        on='key', how='inner')
+    df = df_model.merge(
+        df_odds[['key','home_team','odds_home','odds_draw','odds_away','source']]
+            .rename(columns={'home_team': 'odds_home_team'}),
+        on='key', how='inner')
 
-    print(f"  Merged: {len(df)} matches\n")
+    # オッズCSVとモデル側で home/away の並びが逆の試合はオッズを入れ替える
+    flipped = df['odds_home_team'] != df['home_team']
+    df.loc[flipped, ['odds_home', 'odds_away']] = df.loc[flipped, ['odds_away', 'odds_home']].values
+
+    print(f"  Merged: {len(df)} matches (home/away order corrected: {flipped.sum()})\n")
 
     recommendations = []
 
@@ -116,6 +128,16 @@ def main():
         o_h, o_d, o_a = row['odds_home'], row['odds_draw'], row['odds_away']
         src = row.get('source', 'estimated')
 
+        # 市場インプライド確率へのシュリンク（実オッズの試合のみ。ブックメーカーマージンは正規化で除去）
+        if args.market_blend > 0 and src == 'real':
+            m_h, m_d, m_a = 1 / o_h, 1 / o_d, 1 / o_a
+            overround = m_h + m_d + m_a
+            m_h, m_d, m_a = m_h / overround, m_d / overround, m_a / overround
+            w = args.market_blend
+            p_h = (1 - w) * p_h + w * m_h
+            p_d = (1 - w) * p_d + w * m_d
+            p_a = (1 - w) * p_a + w * m_a
+
         evs = dnb_dc_ev(p_h, p_d, p_a, o_h, o_d, o_a)
 
         for bet_key, ev_info in evs.items():
@@ -125,6 +147,11 @@ def main():
             btype = ev_info['type']
 
             if ev > (args.ev_thresh - 1):  # EV > threshold-1 (evは収益率なので1.05閾値なら0.05)
+                if (1 + ev) > args.max_ev:
+                    print(f"[WARNING] EVサニティ上限超え → 除外: {home} vs {away} "
+                          f"{btype} odds={odds:.2f} EV={1+ev:.3f} "
+                          f"(オッズとモデルの対応関係を確認してください)")
+                    continue
                 kelly_f = kelly_fraction(prob, odds, mode=args.kelly)
                 stake   = round(args.bankroll * kelly_f, 2)
                 recommendations.append({

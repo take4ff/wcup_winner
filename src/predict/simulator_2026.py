@@ -17,7 +17,8 @@ import joblib
 from scipy.stats import poisson
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "../pipeline"))
-from features_common import build_row_from_team_dicts  # noqa: E402
+from features_common import build_row_from_team_dicts, add_team_ids  # noqa: E402
+from altitude import city_altitude, team_home_altitude, DEFAULT_ALTITUDE  # noqa: E402
 
 # ===================================================================
 # 2026年 FIFA World Cup グループ定義 (12グループ × 4チーム)
@@ -194,9 +195,10 @@ def load_team_features(features_df):
     squad_penalties = load_squad_penalties()
 
     for team in all_teams:
+        # 直近の試合（大会中の消化試合も含む）からチーム状態を取得する。
+        # features.csv はスコア確定済みの試合のみ持つため、日付上限は不要
         team_matches = features_df[
-            ((features_df['home_team'] == team) | (features_df['away_team'] == team)) &
-            (features_df['date'] < '2026-06-11')
+            (features_df['home_team'] == team) | (features_df['away_team'] == team)
         ].sort_values(by='date', ascending=False)
 
         if len(team_matches) > 0:
@@ -284,7 +286,8 @@ def load_team_features(features_df):
     return team_features
 
 
-def make_match_features(team_a, team_b, team_feats):
+def make_match_features(team_a, team_b, team_feats, venue_altitude=DEFAULT_ALTITUDE,
+                        rest_days_a=TOURNAMENT_REST_DAYS, rest_days_b=TOURNAMENT_REST_DAYS):
     feat_a = team_feats[team_a]
     feat_b = team_feats[team_b]
 
@@ -296,14 +299,76 @@ def make_match_features(team_a, team_b, team_feats):
         same_conf_opp=1 if feat_b['conf'] == 'CONCACAF' else 0,
         is_host_own=1 if team_a in HOST_COUNTRIES else 0,
         is_host_opp=1 if team_b in HOST_COUNTRIES else 0,
-        rest_days_own=TOURNAMENT_REST_DAYS,
-        rest_days_opp=TOURNAMENT_REST_DAYS,
+        rest_days_own=rest_days_a,
+        rest_days_opp=rest_days_b,
+        altitude_diff_own=venue_altitude - team_home_altitude(team_a),
+        altitude_diff_opp=venue_altitude - team_home_altitude(team_b),
         # 開催国（米加墨）は自国開催試合が neutral=FALSE になるため was_home=1 を適用
         was_home=1 if team_a in HOST_COUNTRIES else 0,
     )
 
 
-def precompute_all_lambdas(team_feats, model_poisson, model_lgbm, feature_cols):
+def load_group_fixtures():
+    """2026年W杯グループステージの実日程（開催都市つき）を results.csv から取得"""
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+    df = pd.read_csv(os.path.join(base_dir, "data/raw/match/results.csv"))
+    df['date'] = pd.to_datetime(df['date'])
+    fx = df[(df['tournament'] == 'FIFA World Cup') &
+            (df['date'] >= '2026-06-01') & (df['date'] <= '2026-06-27')]
+    return fx[['date', 'home_team', 'away_team', 'city']], df
+
+
+def group_fixture_rows(team_feats):
+    """グループステージ実日程の (pair一覧, 特徴量行) を、実開催地の標高と
+    実日程ベースの休養日数つきで構築。ノックアウトや汎用対戦カードは
+    中立(平地)・標準休養のまま、実日程分だけ上書きに使う。"""
+    pairs, rows = [], []
+    try:
+        fixtures, all_matches = load_group_fixtures()
+    except Exception as e:
+        print(f"  [WARNING] 日程データの読み込みに失敗、試合別上書きをスキップ: {e}")
+        return pairs, rows
+
+    def rest_days(team, match_date):
+        prev = all_matches[
+            ((all_matches['home_team'] == team) | (all_matches['away_team'] == team)) &
+            (all_matches['date'] < match_date)
+        ]['date'].max()
+        if pd.isna(prev):
+            return 30.0
+        return float(min((match_date - prev).days, 30))
+
+    for r in fixtures.itertuples():
+        if r.home_team in team_feats and r.away_team in team_feats:
+            va = city_altitude(r.city)
+            rd_h = rest_days(r.home_team, r.date)
+            rd_a = rest_days(r.away_team, r.date)
+            pairs.append((r.home_team, r.away_team))
+            rows.append(make_match_features(r.home_team, r.away_team, team_feats,
+                                            venue_altitude=va, rest_days_a=rd_h, rest_days_b=rd_a))
+            pairs.append((r.away_team, r.home_team))
+            rows.append(make_match_features(r.away_team, r.home_team, team_feats,
+                                            venue_altitude=va, rest_days_a=rd_a, rest_days_b=rd_h))
+    return pairs, rows
+
+
+def _ensemble_lambdas(rows, pairs, feature_cols, model_poisson, model_lgbm,
+                      model_lgbm_cat=None, team_categories=None):
+    """特徴量行から3モデル平均（cat未指定時は2モデル平均）のλを計算"""
+    X = pd.DataFrame(rows)[feature_cols]
+    lam = model_poisson.predict(X) + model_lgbm.predict(X)
+    n_models = 2
+    if model_lgbm_cat is not None and team_categories is not None:
+        own = [p[0] for p in pairs]
+        opp = [p[1] for p in pairs]
+        X_cat = add_team_ids(X, own, opp, team_categories)
+        lam = lam + model_lgbm_cat.predict(X_cat)
+        n_models = 3
+    return lam / n_models
+
+
+def precompute_all_lambdas(team_feats, model_poisson, model_lgbm, feature_cols,
+                           model_lgbm_cat=None, team_categories=None):
     all_teams = list(team_feats.keys())
     pairs, rows = [], []
     for t1 in all_teams:
@@ -312,12 +377,21 @@ def precompute_all_lambdas(team_feats, model_poisson, model_lgbm, feature_cols):
                 pairs.append((t1, t2))
                 rows.append(make_match_features(t1, t2, team_feats))
 
-    X = pd.DataFrame(rows)[feature_cols]
-    lambdas = (model_poisson.predict(X) + model_lgbm.predict(X)) / 2.0
+    lambdas = _ensemble_lambdas(rows, pairs, feature_cols, model_poisson, model_lgbm,
+                                model_lgbm_cat, team_categories)
 
     lambda_cache = {}
     for (t1, t2), lam in zip(pairs, lambdas):
         lambda_cache[(t1, t2)] = lam
+
+    # グループステージの実日程分は、実開催地の標高で再計算して上書き
+    fx_pairs, fx_rows = group_fixture_rows(team_feats)
+    if fx_pairs:
+        lams_fx = _ensemble_lambdas(fx_rows, fx_pairs, feature_cols, model_poisson, model_lgbm,
+                                    model_lgbm_cat, team_categories)
+        for p, lam in zip(fx_pairs, lams_fx):
+            lambda_cache[p] = lam
+        print(f"  Applied venue-altitude overrides for {len(fx_pairs)//2} group fixtures")
     return lambda_cache
 
 
@@ -347,6 +421,7 @@ def simulate_group_stage(lambda_cache):
         pts = defaultdict(int)
         gf  = defaultdict(int)
         ga  = defaultdict(int)
+        h2h = {}  # (勝者, 敗者) -> True
 
         for i in range(len(teams)):
             for j in range(i + 1, len(teams)):
@@ -354,15 +429,26 @@ def simulate_group_stage(lambda_cache):
                 s1, s2 = predict_match(t1, t2, lambda_cache)
                 gf[t1] += s1; ga[t1] += s2
                 gf[t2] += s2; ga[t2] += s1
-                if s1 > s2: pts[t1] += 3
-                elif s1 < s2: pts[t2] += 3
-                else: pts[t1] += 1; pts[t2] += 1
+                if s1 > s2:
+                    pts[t1] += 3
+                    h2h[(t1, t2)] = True
+                elif s1 < s2:
+                    pts[t2] += 3
+                    h2h[(t2, t1)] = True
+                else:
+                    pts[t1] += 1; pts[t2] += 1
 
         standings = sorted(
             teams,
             key=lambda t: (pts[t], gf[t] - ga[t], gf[t]),
             reverse=True
         )
+        # 勝点・得失点差・総得点が完全同一の2チームは直接対決の勝者を上位に（FIFA規則準拠）
+        for k in range(len(standings) - 1):
+            a, b = standings[k], standings[k + 1]
+            if (pts[a], gf[a] - ga[a], gf[a]) == (pts[b], gf[b] - ga[b], gf[b]) \
+                    and h2h.get((b, a)):
+                standings[k], standings[k + 1] = b, a
         group_top2[grp] = standings[:2]
         third = standings[2]
         all_third.append((grp, third, pts[third], gf[third] - ga[third], gf[third]))
@@ -475,13 +561,17 @@ def main():
     model_poisson  = joblib.load(poisson_model_path)
     model_lgbm     = joblib.load(lgbm_model_path)
     feature_cols   = joblib.load(feature_cols_path)
+    base_models_dir = os.path.dirname(poisson_model_path)
+    model_lgbm_cat = joblib.load(os.path.join(base_models_dir, "lgbm_cat_model.joblib"))
+    team_categories = joblib.load(os.path.join(base_models_dir, "team_categories.joblib"))
 
     print("Caching team features just before the 2026 World Cup...")
     team_feats = load_team_features(df_features)
     print(f"  {len(team_feats)} teams loaded.")
 
     print("Precomputing expected goals (lambdas) for all possible matchups...")
-    lambda_cache = precompute_all_lambdas(team_feats, model_poisson, model_lgbm, feature_cols)
+    lambda_cache = precompute_all_lambdas(team_feats, model_poisson, model_lgbm, feature_cols,
+                                          model_lgbm_cat, team_categories)
 
     num_simulations = 10000
     print(f"Running Monte Carlo Simulation ({num_simulations} iterations)...\n")

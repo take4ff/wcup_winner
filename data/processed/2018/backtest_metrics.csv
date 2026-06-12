@@ -1,3 +1,3 @@
 metric,value
-mean_log_loss,0.9578977256480876
-mean_brier_score,0.568999281612009
+mean_log_loss,0.9497909117775148
+mean_brier_score,0.5636607395761202

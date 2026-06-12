@@ -54,13 +54,35 @@ python src/predict/settle_bets_2026.py
 
 ---
 
-## 2. 【情報があれば】負傷者・主力離脱の反映
+## 2. 【手作業】手動で拾ってくる情報（無料運用）
 
-```bash
-# data/raw/squad/squad_penalties_2026.csv に追記（multiplier: 0.85 = 市場価値15%減）
-#   例) Japan,0.90,主力FW負傷離脱
-# 反映は次の予測実行（セクション4）から有効
-```
+> 試合結果・日程・ブックメーカーオッズ・Elo・市場価値は自動取得済み。
+> 手作業が必要なのは下記の4種類だけ。
+> （API-Football有料プラン($19/月)に課金すれば (a)(b) は
+>  `python src/pipeline/fetch_injuries_2026.py` / `--lineups` で自動化可能）
+
+### (a) 負傷者・出場停止【購入予定チームのみ・購入前日まで】
+- **拾う情報**: スタメン級選手の離脱（負傷・累積警告・出場停止）。控え選手は無視してよい
+- **情報源**: FotMob / Flashscore / Transfermarktの負傷者ページ / 代表公式SNS
+- **記入先**: `data/raw/squad/squad_penalties_2026.csv` に `チーム名,倍率,理由`
+  - 目安: スタメン1人離脱 = 0.95、エース級 = 0.90、複数主力 = 0.85（下限の目安）
+  - 例) `Japan,0.90,エースFW負傷離脱`
+  - 復帰したら行を削除
+- **反映**: セクション3の予測を再実行した時点から有効
+
+### (b) スタメン発表【キックオフ約1時間前・購入直前の最終確認】
+- **拾う情報**: 先発11人。特にグループ3戦目の「主力温存（5人以上入れ替え）」
+- **使い方**: 大量ターンオーバーを確認したら、(a) の要領で一時的に倍率を下げて
+  予測→WINNER EVを再計算してから購入判断（買わない判断も含む）
+
+### (c) WINNERの18択オッズ【購入を検討する試合のみ】
+- **拾う情報**: WINNERサイトの18択オッズ（スクリーンショットでOK）
+- **記入先**: `data/raw/odds/winner_inputs/<連番>_winner_<home>_<away>.csv` の odds 列
+  （セクション4のテンプレート生成→記入→計算）
+
+### (d) 試合結果【すぐ精算したい場合のみ】
+- **記入先**: `data/buy_status.csv` の `match_result` 列に「2-0」形式（購入行のhome/away視点）
+- 急がなければ記入不要（翌朝の自動精算に任せる）
 
 数試合消化ごと（2〜3日に1回程度）はモデル自体も再学習する:
 
@@ -397,10 +419,20 @@ python src/pipeline/train_model.py --train_end 2022-11-20 --model_dir models/bac
 python src/backtest/backtest.py --year 2022
 python src/backtest/backtest.py --year 2018
 
-# ウォークフォワード検証（パラメータ調整。全国際試合で評価）
-python src/backtest/walkforward.py --mode probs    # Dixon-Coles ρ × 分類器ブレンド比
+# ウォークフォワード検証（パラメータ調整。全国際試合で評価。新特徴量・新モデルはここでLog Loss改善を確認してから本番投入）
+python src/backtest/walkforward.py --mode probs --start_year 2018  # 成分予測の生成 + ρ×ブレンド比
+python src/backtest/walkforward.py --mode ensemble # λアンサンブル構成の比較（GLM/XGB/チームID入りLGBM等）
+python src/backtest/walkforward.py --mode matrix   # スコア行列: Dixon-Coles vs 二変量Poisson（スコアLLも評価）
+python src/backtest/walkforward.py --mode stack    # スタッキング vs 固定ブレンド
 python src/backtest/walkforward.py --mode shrink --rho -0.09 --cls_blend 0.25  # 市場シュリンク比
 python src/backtest/walkforward.py --mode elo      # Elo Kスケール × ホーム補正
+
+# WINNER市場のバイアス分析（蓄積したオッズ×モデル確率×実績をカテゴリ別に集計）
+python src/predict/analyze_winner_bias.py
+
+# xG検証（StatsBombの過去W杯データ取得 → xGの予測力分析。将来の特徴量化の判断材料）
+python src/pipeline/fetch_statsbomb_xg.py
+python src/backtest/analyze_xg_value.py
 ```
 
 ---

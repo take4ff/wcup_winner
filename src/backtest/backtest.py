@@ -7,7 +7,7 @@ from scipy.stats import poisson
 import joblib
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "../pipeline"))
-from features_common import build_views_from_match_df  # noqa: E402
+from features_common import build_views_from_match_df, add_team_ids  # noqa: E402
 
 def calculate_match_probabilities(lambda_home, lambda_away, rho=0.0, max_goals=10):
     h_probs = poisson.pmf(np.arange(max_goals + 1), lambda_home)
@@ -109,6 +109,9 @@ def main():
     model_lgbm = joblib.load(lgbm_model_path)
     model_classifier = joblib.load(lgbm_classifier_path)
     feature_cols = joblib.load(feature_cols_path)
+    model_lgbm_cat = joblib.load(os.path.join(model_dir, "lgbm_cat_model.joblib"))
+    model_xgb_cls = joblib.load(os.path.join(model_dir, "xgb_classifier_model.joblib"))
+    team_categories = joblib.load(os.path.join(model_dir, "team_categories.joblib"))
     
     # 対象大会の試合を抽出
     wc_matches = df_features[
@@ -149,17 +152,24 @@ def main():
     # A. ポアソン回帰での期待得点
     lambda_poisson_home = model_poisson.predict(home_features)
     lambda_poisson_away = model_poisson.predict(away_features)
-    
+
     # B. LightGBMモデルでの期待得点
     lambda_lgbm_home = model_lgbm.predict(home_features)
     lambda_lgbm_away = model_lgbm.predict(away_features)
-    
-    # C. 平均アンサンブル
-    lambda_homes = (lambda_poisson_home + lambda_lgbm_home) / 2.0
-    lambda_aways = (lambda_poisson_away + lambda_lgbm_away) / 2.0
-    
-    # D. LGBMClassifierによる直接勝敗確率の予測
-    proba_classifier = model_classifier.predict_proba(home_features)
+
+    # B'. チームIDカテゴリカル入りLightGBMでの期待得点
+    home_cat = add_team_ids(home_features, wc_data['home_team'], wc_data['away_team'], team_categories)
+    away_cat = add_team_ids(away_features, wc_data['away_team'], wc_data['home_team'], team_categories)
+    lambda_cat_home = model_lgbm_cat.predict(home_cat)
+    lambda_cat_away = model_lgbm_cat.predict(away_cat)
+
+    # C. 平均アンサンブル（3モデル）
+    lambda_homes = (lambda_poisson_home + lambda_lgbm_home + lambda_cat_home) / 3.0
+    lambda_aways = (lambda_poisson_away + lambda_lgbm_away + lambda_cat_away) / 3.0
+
+    # D. 分類器（LGBM + XGBoost の平均）による直接勝敗確率の予測
+    proba_classifier = (model_classifier.predict_proba(home_features)
+                        + model_xgb_cls.predict_proba(home_features)) / 2.0
     p_away_cls = proba_classifier[:, 0]
     p_draw_cls = proba_classifier[:, 1]
     p_home_cls = proba_classifier[:, 2]

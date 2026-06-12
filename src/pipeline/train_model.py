@@ -14,18 +14,40 @@ optuna.logging.set_verbosity(optuna.logging.WARNING)
 
 # 学習・バックテスト・2026年予測で共通の特徴量リスト
 # 特徴量定義と own/opp 展開は features_common.py に一元化されている
-from features_common import FEATURE_COLS, expand_df_to_rows  # noqa: F401
+from features_common import (FEATURE_COLS, expand_df_to_rows,  # noqa: F401
+                             CAT_COLS, interleaved_teams, add_team_ids)
 
-def prepare_cv_folds(train_df, feature_cols, n_splits=5):
+# XGBoost分類器の固定パラメータ（walkforwardのensemble検証で採用）
+XGB_CLS_PARAMS = {
+    'objective': 'multi:softprob', 'num_class': 3, 'n_estimators': 300,
+    'learning_rate': 0.05, 'max_depth': 5, 'subsample': 0.8, 'colsample_bytree': 0.8,
+    'random_state': 42, 'verbosity': 0,
+}
+
+def decay_weights(dates, half_life_years, reference_date=None):
+    """試合日からの経過年数に応じた指数減衰重み（試合単位）。half_life<=0 なら等重み"""
+    dates = pd.to_datetime(dates)
+    if half_life_years is None or half_life_years <= 0:
+        return np.ones(len(dates))
+    ref = pd.Timestamp(reference_date) if reference_date is not None else dates.max()
+    age_years = (ref - dates).dt.days / 365.25
+    return np.power(0.5, age_years / half_life_years).values
+
+
+def prepare_cv_folds(train_df, feature_cols, n_splits=5, half_life=0.0):
     """TimeSeriesSplitの各フォールドを展開済みで保持する（トライアル間で共有して再計算を回避）"""
     tscv = TimeSeriesSplit(n_splits=n_splits)
     folds = []
     for train_idx, val_idx in tscv.split(train_df):
-        expanded_train = expand_df_to_rows(train_df.iloc[train_idx])
+        fold_train = train_df.iloc[train_idx]
+        expanded_train = expand_df_to_rows(fold_train)
         expanded_val = expand_df_to_rows(train_df.iloc[val_idx])
+        # 試合単位の重みを home/away の2行に展開
+        w = np.repeat(decay_weights(fold_train['date'], half_life), 2)
         folds.append((
             expanded_train[feature_cols], expanded_train['score'], expanded_train['result_class'],
             expanded_val[feature_cols], expanded_val['score'], expanded_val['result_class'],
+            w,
         ))
     return folds
 
@@ -45,9 +67,9 @@ def optimize_lgbm_regressor(cv_folds, n_trials=30):
             'verbosity': -1
         }
         losses = []
-        for X_tr, y_tr, _, X_va, y_va, _ in cv_folds:
+        for X_tr, y_tr, _, X_va, y_va, _, w_tr in cv_folds:
             model = LGBMRegressor(**params)
-            model.fit(X_tr, y_tr)
+            model.fit(X_tr, y_tr, sample_weight=w_tr)
 
             preds = model.predict(X_va)
             preds = np.clip(preds, 1e-10, None)
@@ -79,9 +101,9 @@ def optimize_lgbm_classifier(cv_folds, n_trials=30):
             'verbosity': -1
         }
         losses = []
-        for X_tr, _, y_tr_cls, X_va, _, y_va_cls in cv_folds:
+        for X_tr, _, y_tr_cls, X_va, _, y_va_cls, w_tr in cv_folds:
             model = LGBMClassifier(**params)
-            model.fit(X_tr, y_tr_cls)
+            model.fit(X_tr, y_tr_cls, sample_weight=w_tr)
 
             proba = model.predict_proba(X_va)
             epsilon = 1e-15
@@ -108,6 +130,8 @@ def main():
     parser.add_argument('--n_trials', type=int, default=30, help='Optunaのトライアル数 (default: 30)')
     parser.add_argument('--model_dir', type=str, default='models',
                         help='モデル保存先 (base_dirからの相対パス)。バックテスト用は models/backtest_2022 等を指定して本番モデルと分離する (default: models)')
+    parser.add_argument('--half_life', type=float, default=0.0,
+                        help='時間減衰サンプル重みの半減期(年)。0で無効 (walkforwardで効果検証のうえ設定)')
     args = parser.parse_args()
 
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
@@ -130,41 +154,63 @@ def main():
     # データをチーム視点（対称）に展開して学習データを構築
     train_expanded = expand_df_to_rows(train_df)
     feature_cols = FEATURE_COLS
-    
+
     X = train_expanded[feature_cols]
     y = train_expanded['score']
     y_class = train_expanded['result_class']
-    
+
+    # 時間減衰サンプル重み（試合単位 → home/away 2行に展開）
+    weights = np.repeat(decay_weights(train_df['date'], args.half_life,
+                                      reference_date=args.train_end), 2)
+    if args.half_life > 0:
+        print(f"Applying time-decay sample weights (half_life={args.half_life}y, "
+              f"min weight={weights.min():.3f})")
+
     # 1. Poisson Regression Model
     print("Training Poisson Regression model with StandardScaler...")
     poisson_pipeline = make_pipeline(
         StandardScaler(),
         PoissonRegressor(alpha=1e-4, max_iter=500)
     )
-    poisson_pipeline.fit(X, y)
-    
+    poisson_pipeline.fit(X, y, poissonregressor__sample_weight=weights)
+
     # 2. LightGBM Poisson Regressor (with Optuna tuning)
     print("Preparing TimeSeriesSplit CV folds (shared across Optuna trials)...")
-    cv_folds = prepare_cv_folds(train_df, feature_cols, n_splits=5)
+    cv_folds = prepare_cv_folds(train_df, feature_cols, n_splits=5, half_life=args.half_life)
     best_reg_params = optimize_lgbm_regressor(cv_folds, n_trials=args.n_trials)
     best_reg_params['objective'] = 'poisson'
     best_reg_params['random_state'] = 42
     best_reg_params['verbosity'] = -1
-    
+
     print("Training LightGBM Poisson Regressor with Best Parameters...")
     lgbm_model = LGBMRegressor(**best_reg_params)
-    lgbm_model.fit(X, y)
-    
+    lgbm_model.fit(X, y, sample_weight=weights)
+
     # 3. LightGBM Multiclass Classifier (with Optuna tuning)
     best_cls_params = optimize_lgbm_classifier(cv_folds, n_trials=args.n_trials)
     best_cls_params['objective'] = 'multiclass'
     best_cls_params['num_class'] = 3
     best_cls_params['random_state'] = 42
     best_cls_params['verbosity'] = -1
-    
+
     print("Training LightGBM Multiclass Classifier with Best Parameters...")
     lgbm_classifier = LGBMClassifier(**best_cls_params)
-    lgbm_classifier.fit(X, y_class)
+    lgbm_classifier.fit(X, y_class, sample_weight=weights)
+
+    # 4. チームIDカテゴリカル入り LightGBM Regressor（λアンサンブル第3メンバー）
+    #    カテゴリ一覧は全データから固定し、予測時の整合のため保存する
+    print("Training team-categorical LightGBM Regressor...")
+    team_categories = sorted(set(df['home_team']) | set(df['away_team']))
+    own_t, opp_t = interleaved_teams(train_df)
+    X_cat = add_team_ids(X, own_t, opp_t, team_categories)
+    lgbm_cat = LGBMRegressor(**best_reg_params)
+    lgbm_cat.fit(X_cat, y, sample_weight=weights, categorical_feature=CAT_COLS)
+
+    # 5. XGBoost Multiclass Classifier（1X2確率ブレンドの第2分類器）
+    print("Training XGBoost Classifier...")
+    from xgboost import XGBClassifier
+    xgb_classifier = XGBClassifier(**XGB_CLS_PARAMS)
+    xgb_classifier.fit(X, y_class, sample_weight=weights)
     
     # 保存
     poisson_path = os.path.join(model_dir, "poisson_model.joblib")
@@ -177,6 +223,9 @@ def main():
     joblib.dump(lgbm_model, lgbm_path)
     joblib.dump(lgbm_classifier, lgbm_classifier_path)
     joblib.dump(feature_cols, features_path)
+    joblib.dump(lgbm_cat, os.path.join(model_dir, "lgbm_cat_model.joblib"))
+    joblib.dump(xgb_classifier, os.path.join(model_dir, "xgb_classifier_model.joblib"))
+    joblib.dump(team_categories, os.path.join(model_dir, "team_categories.joblib"))
     
     print("Model training completed successfully.")
 

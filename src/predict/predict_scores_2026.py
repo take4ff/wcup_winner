@@ -12,7 +12,8 @@ from scipy.stats import poisson
 import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from simulator_2026 import (
-    GROUPS_2026, load_team_features, make_match_features, precompute_all_lambdas
+    GROUPS_2026, load_team_features, make_match_features, precompute_all_lambdas,
+    group_fixture_rows
 )
 
 
@@ -35,8 +36,15 @@ def score_prob_matrix(lambda_a, lambda_b, rho=RHO):
     return pm
 
 
-def precompute_all_cls_probas(team_feats, model_classifier, feature_cols):
-    """全対戦カードの分類器確率 (own視点: 0=負, 1=分, 2=勝) を一括計算してキャッシュ"""
+def precompute_all_cls_probas(team_feats, model_classifier, feature_cols, model_xgb_cls=None):
+    """全対戦カードの分類器確率 (own視点: 0=負, 1=分, 2=勝) を一括計算してキャッシュ。
+    XGBoost分類器が渡された場合はLGBMとの平均を使う"""
+    def predict(X):
+        proba = model_classifier.predict_proba(X)
+        if model_xgb_cls is not None:
+            proba = (proba + model_xgb_cls.predict_proba(X)) / 2.0
+        return proba
+
     all_teams = list(team_feats.keys())
     pairs, rows = [], []
     for t1 in all_teams:
@@ -46,8 +54,15 @@ def precompute_all_cls_probas(team_feats, model_classifier, feature_cols):
                 rows.append(make_match_features(t1, t2, team_feats))
 
     X = pd.DataFrame(rows)[feature_cols]
-    probas = model_classifier.predict_proba(X)
-    return {pair: proba for pair, proba in zip(pairs, probas)}
+    cache = {pair: proba for pair, proba in zip(pairs, predict(X))}
+
+    # グループステージの実日程分は、実開催地の標高・休養日数で再計算して上書き
+    fx_pairs, fx_rows = group_fixture_rows(team_feats)
+    if fx_pairs:
+        X_fx = pd.DataFrame(fx_rows)[feature_cols]
+        for p, proba in zip(fx_pairs, predict(X_fx)):
+            cache[p] = proba
+    return cache
 
 
 def predict_match_score(team_a, team_b, lambda_cache, cls_proba_cache=None,
@@ -106,15 +121,21 @@ def main():
     model_lgbm    = joblib.load(lgbm_model_path)
     model_classifier = joblib.load(lgbm_classifier_path)
     feature_cols  = joblib.load(feature_cols_path)
+    models_dir = os.path.dirname(poisson_model_path)
+    model_lgbm_cat = joblib.load(os.path.join(models_dir, "lgbm_cat_model.joblib"))
+    model_xgb_cls = joblib.load(os.path.join(models_dir, "xgb_classifier_model.joblib"))
+    team_categories = joblib.load(os.path.join(models_dir, "team_categories.joblib"))
 
     print("Loading team features...")
     team_feats = load_team_features(df)
 
     print("Precomputing lambdas...")
-    lambda_cache = precompute_all_lambdas(team_feats, model_poisson, model_lgbm, feature_cols)
+    lambda_cache = precompute_all_lambdas(team_feats, model_poisson, model_lgbm, feature_cols,
+                                          model_lgbm_cat, team_categories)
 
     print(f"Precomputing classifier probabilities (blend={args.cls_blend})...")
-    cls_proba_cache = precompute_all_cls_probas(team_feats, model_classifier, feature_cols)
+    cls_proba_cache = precompute_all_cls_probas(team_feats, model_classifier, feature_cols,
+                                                model_xgb_cls)
 
     # グループステージ全試合の予測
     records = []

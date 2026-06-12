@@ -24,7 +24,19 @@ import pandas as pd
 from scipy.stats import poisson
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "../pipeline"))
-from train_model import expand_df_to_rows, FEATURE_COLS  # noqa: E402
+from train_model import expand_df_to_rows, FEATURE_COLS, decay_weights  # noqa: E402
+from team_glm import TeamGLM  # noqa: E402
+
+XGB_REG_PARAMS = {
+    'objective': 'count:poisson', 'n_estimators': 300, 'learning_rate': 0.05,
+    'max_depth': 5, 'subsample': 0.8, 'colsample_bytree': 0.8,
+    'random_state': 42, 'verbosity': 0,
+}
+XGB_CLS_PARAMS = {
+    'objective': 'multi:softprob', 'num_class': 3, 'n_estimators': 300,
+    'learning_rate': 0.05, 'max_depth': 5, 'subsample': 0.8, 'colsample_bytree': 0.8,
+    'random_state': 42, 'verbosity': 0,
+}
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 MAX_GOALS = 10
@@ -61,7 +73,8 @@ def dixon_coles_matrix(lh, la, rho):
     return pm
 
 
-def walkforward_predictions(df, feature_cols, start_year, end_year, train_start='2015-01-01'):
+def walkforward_predictions(df, feature_cols, start_year, end_year, train_start='2015-01-01',
+                            half_life=0.0):
     """年次ウォークフォワードで全評価試合の (λh, λa, 分類器確率, 実結果) を生成"""
     from sklearn.linear_model import PoissonRegressor
     from sklearn.preprocessing import StandardScaler
@@ -78,24 +91,59 @@ def walkforward_predictions(df, feature_cols, start_year, end_year, train_start=
 
         tr = expand_df_to_rows(train_df)
         X_tr = tr[feature_cols]
+        w = np.repeat(decay_weights(train_df['date'], half_life,
+                                    reference_date=f'{year}-01-01'), 2)
 
         poisson_pipe = make_pipeline(StandardScaler(), PoissonRegressor(alpha=1e-4, max_iter=500))
-        poisson_pipe.fit(X_tr, tr['score'])
+        poisson_pipe.fit(X_tr, tr['score'], poissonregressor__sample_weight=w)
         reg = LGBMRegressor(**LGBM_REG_PARAMS)
-        reg.fit(X_tr, tr['score'])
+        reg.fit(X_tr, tr['score'], sample_weight=w)
         cls = LGBMClassifier(**LGBM_CLS_PARAMS)
-        cls.fit(X_tr, tr['result_class'])
+        cls.fit(X_tr, tr['result_class'], sample_weight=w)
+
+        # 追加成分: チーム攻守GLM（全履歴・時間減衰）
+        glm = TeamGLM().fit(df, train_end=f'{year}-01-01')
+
+        # 追加成分: XGBoost回帰・分類器
+        from xgboost import XGBRegressor, XGBClassifier
+        xreg = XGBRegressor(**XGB_REG_PARAMS)
+        xreg.fit(X_tr, tr['score'], sample_weight=w)
+        xcls = XGBClassifier(**XGB_CLS_PARAMS)
+        xcls.fit(X_tr, tr['result_class'], sample_weight=w)
+
+        # 追加成分: チームIDカテゴリカル入りLGBM（簡易埋め込みの代替）
+        team_cats = pd.Categorical(pd.concat([df['home_team'], df['away_team']])).categories
+        def team_cols(src_df):
+            own = np.empty(2 * len(src_df), dtype=object)
+            opp = np.empty(2 * len(src_df), dtype=object)
+            own[0::2] = src_df['home_team'].values; opp[0::2] = src_df['away_team'].values
+            own[1::2] = src_df['away_team'].values; opp[1::2] = src_df['home_team'].values
+            return (pd.Categorical(own, categories=team_cats).codes,
+                    pd.Categorical(opp, categories=team_cats).codes)
+        own_tr, opp_tr = team_cols(train_df)
+        X_tr_cat = X_tr.copy(); X_tr_cat['own_id'] = own_tr; X_tr_cat['opp_id'] = opp_tr
+        creg = LGBMRegressor(**LGBM_REG_PARAMS)
+        creg.fit(X_tr_cat, tr['score'], sample_weight=w,
+                 categorical_feature=['own_id', 'opp_id'])
 
         ev = expand_df_to_rows(eval_df)
         X_ev = ev[feature_cols]
-        lambdas = (poisson_pipe.predict(X_ev) + reg.predict(X_ev)) / 2.0
-        probas = cls.predict_proba(X_ev)  # own視点 [負, 分, 勝]
+        lam_p = poisson_pipe.predict(X_ev)
+        lam_l = reg.predict(X_ev)
+        lam_x = xreg.predict(X_ev)
+        own_ev, opp_ev = team_cols(eval_df)
+        X_ev_cat = X_ev.copy(); X_ev_cat['own_id'] = own_ev; X_ev_cat['opp_id'] = opp_ev
+        lam_c = creg.predict(X_ev_cat)
+        probas = cls.predict_proba(X_ev)
+        xprobas = xcls.predict_proba(X_ev)
+
+        # GLMのλ（ホーム視点行はwas_home= not neutral）
+        was_home = (~eval_df['neutral'].astype(bool)).astype(int).values
+        lam_g_h = glm.predict_lambdas(eval_df['home_team'], eval_df['away_team'], was_home)
+        lam_g_a = glm.predict_lambdas(eval_df['away_team'], eval_df['home_team'], np.zeros(len(eval_df)))
 
         # 偶数行=ホーム視点, 奇数行=アウェイ視点
-        n = len(eval_df)
         for i, (_, row) in enumerate(eval_df.iterrows()):
-            lh, la = lambdas[2 * i], lambdas[2 * i + 1]
-            p_cls = probas[2 * i]  # ホーム視点: [away勝, 分, home勝]
             if row['home_score'] > row['away_score']:
                 actual = 'H'
             elif row['home_score'] < row['away_score']:
@@ -105,8 +153,18 @@ def walkforward_predictions(df, feature_cols, start_year, end_year, train_start=
             records.append({
                 'year': year, 'date': row['date'],
                 'home_team': row['home_team'], 'away_team': row['away_team'],
-                'lambda_home': lh, 'lambda_away': la,
-                'p_home_cls': p_cls[2], 'p_draw_cls': p_cls[1], 'p_away_cls': p_cls[0],
+                'home_score': row['home_score'], 'away_score': row['away_score'],
+                'lambda_home': (lam_p[2 * i] + lam_l[2 * i]) / 2.0,
+                'lambda_away': (lam_p[2 * i + 1] + lam_l[2 * i + 1]) / 2.0,
+                'lam_p_h': lam_p[2 * i], 'lam_p_a': lam_p[2 * i + 1],
+                'lam_l_h': lam_l[2 * i], 'lam_l_a': lam_l[2 * i + 1],
+                'lam_x_h': lam_x[2 * i], 'lam_x_a': lam_x[2 * i + 1],
+                'lam_c_h': lam_c[2 * i], 'lam_c_a': lam_c[2 * i + 1],
+                'lam_g_h': lam_g_h[i], 'lam_g_a': lam_g_a[i],
+                'p_home_cls': probas[2 * i][2], 'p_draw_cls': probas[2 * i][1],
+                'p_away_cls': probas[2 * i][0],
+                'p_home_xcls': xprobas[2 * i][2], 'p_draw_xcls': xprobas[2 * i][1],
+                'p_away_xcls': xprobas[2 * i][0],
                 'actual': actual,
                 'is_wc': row['tournament'] == 'FIFA World Cup',
             })
@@ -142,8 +200,9 @@ def mode_probs(args):
     df = df.dropna(subset=['home_score', 'away_score'])
     feature_cols = get_feature_cols()
 
-    print("Running walk-forward predictions...")
-    preds = walkforward_predictions(df, feature_cols, args.start_year, args.end_year)
+    print(f"Running walk-forward predictions (half_life={args.half_life})...")
+    preds = walkforward_predictions(df, feature_cols, args.start_year, args.end_year,
+                                    half_life=args.half_life)
     preds_path = os.path.join(BASE_DIR, "data/processed/walkforward_predictions.csv")
     preds.to_csv(preds_path, index=False)
     print(f"Saved {len(preds)} match predictions to {preds_path}")
@@ -168,6 +227,138 @@ def mode_probs(args):
         print(grid_wc.pivot(index='rho', columns='cls_blend', values='log_loss').round(5).to_string())
         print(f"\nBest(W杯): rho={best_wc['rho']:.2f}, cls_blend={best_wc['cls_blend']:.2f} "
               f"(LogLoss={best_wc['log_loss']:.5f})")
+
+
+def _outcome_probs(lh_arr, la_arr, rho):
+    """λ配列 → [pH,pD,pA] 行列（Dixon-Coles補正つき）"""
+    out = np.empty((len(lh_arr), 3))
+    for i, (lh, la) in enumerate(zip(lh_arr, la_arr)):
+        pm = dixon_coles_matrix(lh, la, rho)
+        out[i] = [np.sum(np.tril(pm, -1)), np.sum(np.diag(pm)), np.sum(np.triu(pm, 1))]
+    return out
+
+
+def _logloss(p, y):
+    eps = 1e-15
+    p = np.clip(p / p.sum(axis=1, keepdims=True), eps, 1 - eps)
+    return -np.mean(np.log(p[np.arange(len(y)), y]))
+
+
+def mode_ensemble(args):
+    """λアンサンブル構成と分類器ブレンド構成の比較（rho/blendは現行最適値で固定）"""
+    preds = pd.read_csv(os.path.join(BASE_DIR, "data/processed/walkforward_predictions.csv"))
+    y = preds['actual'].map({'H': 0, 'D': 1, 'A': 2}).values
+    rho, w_cls = -0.09, 0.25
+
+    lam_configs = {
+        'P+L (現行)':   (preds[['lam_p_h', 'lam_l_h']].mean(1), preds[['lam_p_a', 'lam_l_a']].mean(1)),
+        'P+L+G':       (preds[['lam_p_h', 'lam_l_h', 'lam_g_h']].mean(1), preds[['lam_p_a', 'lam_l_a', 'lam_g_a']].mean(1)),
+        'P+L+X':       (preds[['lam_p_h', 'lam_l_h', 'lam_x_h']].mean(1), preds[['lam_p_a', 'lam_l_a', 'lam_x_a']].mean(1)),
+        'P+L+C':       (preds[['lam_p_h', 'lam_l_h', 'lam_c_h']].mean(1), preds[['lam_p_a', 'lam_l_a', 'lam_c_a']].mean(1)),
+        'P+L+G+X':     (preds[['lam_p_h', 'lam_l_h', 'lam_g_h', 'lam_x_h']].mean(1), preds[['lam_p_a', 'lam_l_a', 'lam_g_a', 'lam_x_a']].mean(1)),
+        'P+L+G+X+C':   (preds[['lam_p_h', 'lam_l_h', 'lam_g_h', 'lam_x_h', 'lam_c_h']].mean(1), preds[['lam_p_a', 'lam_l_a', 'lam_g_a', 'lam_x_a', 'lam_c_a']].mean(1)),
+        'G単体':        (preds['lam_g_h'], preds['lam_g_a']),
+        'C単体':        (preds['lam_c_h'], preds['lam_c_a']),
+        'X単体':        (preds['lam_x_h'], preds['lam_x_a']),
+    }
+    cls_l = preds[['p_home_cls', 'p_draw_cls', 'p_away_cls']].values
+    cls_lx = (cls_l + preds[['p_home_xcls', 'p_draw_xcls', 'p_away_xcls']].values) / 2.0
+
+    print(f"=== λアンサンブル構成の比較 (rho={rho}, cls_blend={w_cls}, n={len(preds)}) ===")
+    print(f"{'構成':<14} {'cls=LGBM':>10} {'cls=LGBM+XGB':>14}")
+    results = {}
+    for name, (lh, la) in lam_configs.items():
+        mat = _outcome_probs(lh.values, la.values, rho)
+        ll_l = _logloss((1 - w_cls) * mat + w_cls * cls_l, y)
+        ll_lx = _logloss((1 - w_cls) * mat + w_cls * cls_lx, y)
+        results[name] = min(ll_l, ll_lx)
+        print(f"{name:<14} {ll_l:>10.5f} {ll_lx:>14.5f}")
+    best = min(results, key=results.get)
+    print(f"\nBest λ構成: {best} (LogLoss={results[best]:.5f})")
+
+
+def bivariate_poisson_matrix(lh, la, lam3, max_goals=10):
+    """二変量Poisson: X=X1+X3, Y=X2+X3, λ1=lh-λ3, λ2=la-λ3"""
+    from math import comb, factorial
+    l1, l2 = max(lh - lam3, 0.05), max(la - lam3, 0.05)
+    base = np.exp(-(l1 + l2 + lam3))
+    pm = np.zeros((max_goals + 1, max_goals + 1))
+    ratio = lam3 / (l1 * l2) if lam3 > 0 else 0.0
+    for x in range(max_goals + 1):
+        for ycol in range(max_goals + 1):
+            s = sum(comb(x, k) * comb(ycol, k) * factorial(k) * ratio ** k
+                    for k in range(0, min(x, ycol) + 1)) if lam3 > 0 else 1.0
+            pm[x, ycol] = base * l1 ** x / factorial(x) * l2 ** ycol / factorial(ycol) * s
+    return pm / pm.sum()
+
+
+def mode_matrix(args):
+    """スコア行列モデルの比較: Dixon-Coles(ρ) vs 二変量Poisson(λ3)。
+    1X2 Log Loss と 正確なスコアの Log Loss の両方で評価"""
+    preds = pd.read_csv(os.path.join(BASE_DIR, "data/processed/walkforward_predictions.csv"))
+    y = preds['actual'].map({'H': 0, 'D': 1, 'A': 2}).values
+    hs = preds['home_score'].clip(upper=MAX_GOALS).astype(int).values
+    as_ = preds['away_score'].clip(upper=MAX_GOALS).astype(int).values
+    lh, la = preds['lambda_home'].values, preds['lambda_away'].values
+    cls = preds[['p_home_cls', 'p_draw_cls', 'p_away_cls']].values
+    w_cls, eps = 0.25, 1e-15
+
+    print(f"=== スコア行列の比較 (λ=P+L, n={len(preds)}) ===")
+    print(f"{'モデル':<16} {'1X2 LL(blend後)':>16} {'スコアLL':>10}")
+    for label, builder, grid in [
+        ('DC rho', lambda a, b, v: dixon_coles_matrix(a, b, v), [-0.12, -0.09, -0.06, 0.0]),
+        ('BP lam3', bivariate_poisson_matrix, [0.05, 0.1, 0.15, 0.2]),
+    ]:
+        for v in grid:
+            mat3 = np.empty((len(preds), 3))
+            score_ll = 0.0
+            for i in range(len(preds)):
+                pm = builder(lh[i], la[i], v)
+                mat3[i] = [np.sum(np.tril(pm, -1)), np.sum(np.diag(pm)), np.sum(np.triu(pm, 1))]
+                score_ll -= np.log(max(pm[hs[i], as_[i]], eps))
+            ll_1x2 = _logloss((1 - w_cls) * mat3 + w_cls * cls, y)
+            print(f"{label} = {v:<8} {ll_1x2:>16.5f} {score_ll / len(preds):>10.5f}")
+
+
+def mode_stack(args):
+    """スタッキング: 成分確率を入力にした多項ロジスティックで最終1X2確率を合成。
+    年次ウォークフォワード（その年より前の予測で学習）で固定ブレンドと比較"""
+    from sklearn.linear_model import LogisticRegression
+    preds = pd.read_csv(os.path.join(BASE_DIR, "data/processed/walkforward_predictions.csv"))
+    y = preds['actual'].map({'H': 0, 'D': 1, 'A': 2}).values
+    rho = -0.09
+
+    mat = _outcome_probs(preds['lambda_home'].values, preds['lambda_away'].values, rho)
+    cls = preds[['p_home_cls', 'p_draw_cls', 'p_away_cls']].values
+    xcls = preds[['p_home_xcls', 'p_draw_xcls', 'p_away_xcls']].values
+    glm_mat = _outcome_probs(preds['lam_g_h'].values, preds['lam_g_a'].values, rho)
+
+    eps = 1e-9
+    X_meta = np.column_stack([
+        np.log(np.clip(mat, eps, 1)), np.log(np.clip(cls, eps, 1)),
+        np.log(np.clip(xcls, eps, 1)), np.log(np.clip(glm_mat, eps, 1)),
+        (preds['lambda_home'] - preds['lambda_away']).values,
+        (preds['lambda_home'] + preds['lambda_away']).values,
+    ])
+    years = preds['year'].values
+
+    fixed = (1 - 0.25) * mat + 0.25 * cls
+    stack_p = np.full((len(preds), 3), np.nan)
+    eval_years = sorted(set(years))[2:]  # 最初の2年は学習専用
+    for yr in eval_years:
+        tr_idx, ev_idx = years < yr, years == yr
+        meta = LogisticRegression(max_iter=2000, C=1.0)
+        meta.fit(X_meta[tr_idx], y[tr_idx])
+        stack_p[ev_idx] = meta.predict_proba(X_meta[ev_idx])
+
+    mask = ~np.isnan(stack_p[:, 0])
+    print(f"=== スタッキング評価 (評価対象 {mask.sum()} 試合, {eval_years[0]}年以降) ===")
+    print(f"  固定ブレンド (現行 0.75行列+0.25分類器): LogLoss {_logloss(fixed[mask], y[mask]):.5f}")
+    print(f"  スタッキング (多項ロジスティック)      : LogLoss {_logloss(stack_p[mask], y[mask]):.5f}")
+    wc_mask = mask & preds['is_wc'].values
+    if wc_mask.sum():
+        print(f"  [W杯のみ n={wc_mask.sum()}] 固定 {_logloss(fixed[wc_mask], y[wc_mask]):.5f} "
+              f"vs スタック {_logloss(stack_p[wc_mask], y[wc_mask]):.5f}")
 
 
 def mode_shrink(args):
@@ -283,17 +474,26 @@ def mode_elo(args):
 
 def main():
     parser = argparse.ArgumentParser(description='ウォークフォワード検証・パラメータ調整')
-    parser.add_argument('--mode', choices=['probs', 'shrink', 'elo'], default='probs')
+    parser.add_argument('--mode', choices=['probs', 'shrink', 'elo', 'ensemble', 'matrix', 'stack'],
+                        default='probs')
     parser.add_argument('--start_year', type=int, default=2019)
     parser.add_argument('--end_year', type=int, default=2026)
     parser.add_argument('--rho', type=float, default=-0.03, help='shrinkモードで使うρ')
     parser.add_argument('--cls_blend', type=float, default=0.5, help='shrinkモードで使うブレンド比')
+    parser.add_argument('--half_life', type=float, default=0.0,
+                        help='時間減衰サンプル重みの半減期(年)。0で無効')
     args = parser.parse_args()
 
     if args.mode == 'probs':
         mode_probs(args)
     elif args.mode == 'shrink':
         mode_shrink(args)
+    elif args.mode == 'ensemble':
+        mode_ensemble(args)
+    elif args.mode == 'matrix':
+        mode_matrix(args)
+    elif args.mode == 'stack':
+        mode_stack(args)
     else:
         mode_elo(args)
 

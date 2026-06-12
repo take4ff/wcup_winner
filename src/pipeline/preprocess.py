@@ -1,6 +1,10 @@
 import os
+import sys
 import pandas as pd
 import numpy as np
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from altitude import city_altitude, team_home_altitude  # noqa: E402
 
 # 所属連盟（Confederation）定義
 # 全FIFA加盟国 + 歴史的代表（消滅国）+ 連盟管轄の準加盟地域をカバーする。
@@ -272,42 +276,35 @@ def create_features():
     df_features = df_features.merge(home_rows, on='match_idx', how='left')
     df_features = df_features.merge(away_rows, on='match_idx', how='left')
     
-    # 選手市場価値（Squad Value）のロードとマージ（時系列分割マージ）
-    print("Merging Squad Value features based on match dates...")
-    squad_2018_path = os.path.join(base_dir, "data/raw/squad/squad_values_2018.csv")
-    squad_2022_path = os.path.join(base_dir, "data/raw/squad/squad_values_2022.csv")
-    squad_2026_path = os.path.join(base_dir, "data/raw/squad/squad_values_2026.csv")
-    
-    df_squad_2018 = pd.read_csv(squad_2018_path)
-    df_squad_2022 = pd.read_csv(squad_2022_path)
-    df_squad_2026 = pd.read_csv(squad_2026_path)
-    
-    # 期間別に分割
-    cond_2018 = df_features['date'] <= '2018-07-15'
-    cond_2022 = (df_features['date'] > '2018-07-15') & (df_features['date'] <= '2022-12-18')
-    cond_2026 = df_features['date'] > '2022-12-18'
-    
-    df_part_2018 = df_features[cond_2018].copy()
-    df_part_2022 = df_features[cond_2022].copy()
-    df_part_2026 = df_features[cond_2026].copy()
-    
-    # マージ用ヘルパー関数
-    def merge_squad(df_part, df_squad):
-        if len(df_part) == 0:
-            df_part['home_squad_value'] = np.nan
-            df_part['away_squad_value'] = np.nan
-            return df_part
-        df_part = df_part.merge(df_squad.rename(columns={'team': 'home_team', 'squad_value_eur_million': 'home_squad_value'}), on='home_team', how='left')
-        df_part = df_part.merge(df_squad.rename(columns={'team': 'away_team', 'squad_value_eur_million': 'away_squad_value'}), on='away_team', how='left')
-        return df_part
-        
-    df_part_2018 = merge_squad(df_part_2018, df_squad_2018)
-    df_part_2022 = merge_squad(df_part_2022, df_squad_2022)
-    df_part_2026 = merge_squad(df_part_2026, df_squad_2026)
-    
-    # 再結合
-    df_features = pd.concat([df_part_2018, df_part_2022, df_part_2026], ignore_index=True)
-    df_features = df_features.sort_values(by='date').reset_index(drop=True)
+    # 選手市場価値（Squad Value）: 3スナップショットの日付線形補間
+    # 旧実装は「2022-12-18以降は一律2026年値」だったため、2023年の試合に未来の
+    # 市場価値が混入するリークがあった。スナップショット日付間で線形補間する。
+    print("Merging Squad Value features (date-interpolated)...")
+    snapshots = [
+        (pd.Timestamp('2018-06-01'), pd.read_csv(os.path.join(base_dir, "data/raw/squad/squad_values_2018.csv"))),
+        (pd.Timestamp('2022-11-01'), pd.read_csv(os.path.join(base_dir, "data/raw/squad/squad_values_2022.csv"))),
+        (pd.Timestamp('2026-06-01'), pd.read_csv(os.path.join(base_dir, "data/raw/squad/squad_values_2026.csv"))),
+    ]
+    # チーム -> (スナップショット日付epoch[], 値[])
+    team_series = {}
+    for snap_date, snap_df in snapshots:
+        for r in snap_df.itertuples():
+            team_series.setdefault(r.team, ([], []))
+            team_series[r.team][0].append(snap_date.value)
+            team_series[r.team][1].append(float(r.squad_value_eur_million))
+
+    def interp_value(team, date_val):
+        s = team_series.get(team)
+        if s is None:
+            return np.nan
+        # 範囲外は端の値で埋める（np.interpのデフォルト挙動）
+        return float(np.interp(date_val, s[0], s[1]))
+
+    date_vals = df_features['date'].astype('int64')
+    df_features['home_squad_value'] = [
+        interp_value(t, d) for t, d in zip(df_features['home_team'], date_vals)]
+    df_features['away_squad_value'] = [
+        interp_value(t, d) for t, d in zip(df_features['away_team'], date_vals)]
 
     # 市場価値の欠損フラグ（モデルに「データなし」を明示する）と控えめなデフォルト値
     # ※ 市場価値ファイルは主にW杯出場国を収録しているため、欠損＝中堅以下の国が大半。
@@ -334,6 +331,12 @@ def create_features():
         on=['date', 'away_team'], how='left')
     df_features['home_rest_days'] = df_features['home_rest_days'].fillna(30.0)
     df_features['away_rest_days'] = df_features['away_rest_days'].fillna(30.0)
+
+    # 標高差特徴量（開催都市の標高 - チーム本拠の標高。高地未順応の不利を表現）
+    print("Adding altitude features...")
+    venue_alt = df_features['city'].map(city_altitude)
+    df_features['home_altitude_diff'] = venue_alt - df_features['home_team'].map(team_home_altitude)
+    df_features['away_altitude_diff'] = venue_alt - df_features['away_team'].map(team_home_altitude)
     
     # 実質ホームアドバンテージ（連盟一致・開催国）の追加
     print("Adding confederation and host features...")

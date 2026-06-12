@@ -133,7 +133,7 @@ WINNERサイトの18択オッズを記入 → ③同じ試合の計算コマン�
 ### グループステージ全72試合（日程順）
 
 ```bash
-# ===== 6/11 =====
+# ===== 6/12 =====
 # 01: Mexico vs South Africa
 python src/predict/calculate_winner_ev_general.py --generate_template data/raw/odds/winner_inputs/01_winner_mexico_south_africa.csv
 python src/predict/calculate_winner_ev_general.py --home Mexico --away "South Africa" --odds_csv data/raw/odds/winner_inputs/01_winner_mexico_south_africa.csv
@@ -141,7 +141,7 @@ python src/predict/calculate_winner_ev_general.py --home Mexico --away "South Af
 python src/predict/calculate_winner_ev_general.py --generate_template data/raw/odds/winner_inputs/02_winner_south_korea_czech_republic.csv
 python src/predict/calculate_winner_ev_general.py --home "South Korea" --away "Czech Republic" --odds_csv data/raw/odds/winner_inputs/02_winner_south_korea_czech_republic.csv
 
-# ===== 6/12 =====
+# ===== 6/13 =====
 # 03: Canada vs Bosnia and Herzegovina
 python src/predict/calculate_winner_ev_general.py --generate_template data/raw/odds/winner_inputs/03_winner_canada_bosnia_and_herzegovina.csv
 python src/predict/calculate_winner_ev_general.py --home Canada --away "Bosnia and Herzegovina" --odds_csv data/raw/odds/winner_inputs/03_winner_canada_bosnia_and_herzegovina.csv
@@ -149,7 +149,7 @@ python src/predict/calculate_winner_ev_general.py --home Canada --away "Bosnia a
 python src/predict/calculate_winner_ev_general.py --generate_template data/raw/odds/winner_inputs/04_winner_united_states_paraguay.csv
 python src/predict/calculate_winner_ev_general.py --home "United States" --away Paraguay --odds_csv data/raw/odds/winner_inputs/04_winner_united_states_paraguay.csv
 
-# ===== 6/13 =====
+# ===== 6/14 =====
 # 05: Qatar vs Switzerland
 python src/predict/calculate_winner_ev_general.py --generate_template data/raw/odds/winner_inputs/05_winner_qatar_switzerland.csv
 python src/predict/calculate_winner_ev_general.py --home Qatar --away Switzerland --odds_csv data/raw/odds/winner_inputs/05_winner_qatar_switzerland.csv
@@ -163,7 +163,7 @@ python src/predict/calculate_winner_ev_general.py --home Haiti --away Scotland -
 python src/predict/calculate_winner_ev_general.py --generate_template data/raw/odds/winner_inputs/08_winner_australia_turkey.csv
 python src/predict/calculate_winner_ev_general.py --home Australia --away Turkey --odds_csv data/raw/odds/winner_inputs/08_winner_australia_turkey.csv
 
-# ===== 6/14 =====
+# ===== 6/15 =====
 # 09: Germany vs Curaçao
 python src/predict/calculate_winner_ev_general.py --generate_template data/raw/odds/winner_inputs/09_winner_germany_curaçao.csv
 python src/predict/calculate_winner_ev_general.py --home Germany --away Curaçao --odds_csv data/raw/odds/winner_inputs/09_winner_germany_curaçao.csv
@@ -177,7 +177,7 @@ python src/predict/calculate_winner_ev_general.py --home Netherlands --away Japa
 python src/predict/calculate_winner_ev_general.py --generate_template data/raw/odds/winner_inputs/12_winner_sweden_tunisia.csv
 python src/predict/calculate_winner_ev_general.py --home Sweden --away Tunisia --odds_csv data/raw/odds/winner_inputs/12_winner_sweden_tunisia.csv
 
-# ===== 6/15 =====
+# ===== 6/16 =====
 # 13: Belgium vs Egypt
 python src/predict/calculate_winner_ev_general.py --generate_template data/raw/odds/winner_inputs/13_winner_belgium_egypt.csv
 python src/predict/calculate_winner_ev_general.py --home Belgium --away Egypt --odds_csv data/raw/odds/winner_inputs/13_winner_belgium_egypt.csv
@@ -191,7 +191,7 @@ python src/predict/calculate_winner_ev_general.py --home Spain --away "Cape Verd
 python src/predict/calculate_winner_ev_general.py --generate_template data/raw/odds/winner_inputs/16_winner_saudi_arabia_uruguay.csv
 python src/predict/calculate_winner_ev_general.py --home "Saudi Arabia" --away Uruguay --odds_csv data/raw/odds/winner_inputs/16_winner_saudi_arabia_uruguay.csv
 
-# ===== 6/16 =====
+# ===== 6/17 =====
 # 17: France vs Senegal
 python src/predict/calculate_winner_ev_general.py --generate_template data/raw/odds/winner_inputs/17_winner_france_senegal.csv
 python src/predict/calculate_winner_ev_general.py --home France --away Senegal --odds_csv data/raw/odds/winner_inputs/17_winner_france_senegal.csv
@@ -205,7 +205,7 @@ python src/predict/calculate_winner_ev_general.py --home Argentina --away Algeri
 python src/predict/calculate_winner_ev_general.py --generate_template data/raw/odds/winner_inputs/20_winner_austria_jordan.csv
 python src/predict/calculate_winner_ev_general.py --home Austria --away Jordan --odds_csv data/raw/odds/winner_inputs/20_winner_austria_jordan.csv
 
-# ===== 6/17 =====
+# ===== 6/18 =====
 # 21: Portugal vs DR Congo
 python src/predict/calculate_winner_ev_general.py --generate_template data/raw/odds/winner_inputs/21_winner_portugal_dr_congo.csv
 python src/predict/calculate_winner_ev_general.py --home Portugal --away "DR Congo" --odds_csv data/raw/odds/winner_inputs/21_winner_portugal_dr_congo.csv
@@ -219,7 +219,7 @@ python src/predict/calculate_winner_ev_general.py --home England --away Croatia 
 python src/predict/calculate_winner_ev_general.py --generate_template data/raw/odds/winner_inputs/24_winner_ghana_panama.csv
 python src/predict/calculate_winner_ev_general.py --home Ghana --away Panama --odds_csv data/raw/odds/winner_inputs/24_winner_ghana_panama.csv
 
-# ===== 6/18 =====
+# ===== 6/19 =====
 # 25: Czech Republic vs South Africa
 python src/predict/calculate_winner_ev_general.py --generate_template data/raw/odds/winner_inputs/25_winner_czech_republic_south_africa.csv
 python src/predict/calculate_winner_ev_general.py --home "Czech Republic" --away "South Africa" --odds_csv data/raw/odds/winner_inputs/25_winner_czech_republic_south_africa.csv
@@ -233,7 +233,7 @@ python src/predict/calculate_winner_ev_general.py --home Switzerland --away "Bos
 python src/predict/calculate_winner_ev_general.py --generate_template data/raw/odds/winner_inputs/28_winner_canada_qatar.csv
 python src/predict/calculate_winner_ev_general.py --home Canada --away Qatar --odds_csv data/raw/odds/winner_inputs/28_winner_canada_qatar.csv
 
-# ===== 6/19 =====
+# ===== 6/20 =====
 # 29: Scotland vs Morocco
 python src/predict/calculate_winner_ev_general.py --generate_template data/raw/odds/winner_inputs/29_winner_scotland_morocco.csv
 python src/predict/calculate_winner_ev_general.py --home Scotland --away Morocco --odds_csv data/raw/odds/winner_inputs/29_winner_scotland_morocco.csv
@@ -247,7 +247,7 @@ python src/predict/calculate_winner_ev_general.py --home "United States" --away 
 python src/predict/calculate_winner_ev_general.py --generate_template data/raw/odds/winner_inputs/32_winner_turkey_paraguay.csv
 python src/predict/calculate_winner_ev_general.py --home Turkey --away Paraguay --odds_csv data/raw/odds/winner_inputs/32_winner_turkey_paraguay.csv
 
-# ===== 6/20 =====
+# ===== 6/21 =====
 # 33: Germany vs Ivory Coast
 python src/predict/calculate_winner_ev_general.py --generate_template data/raw/odds/winner_inputs/33_winner_germany_ivory_coast.csv
 python src/predict/calculate_winner_ev_general.py --home Germany --away "Ivory Coast" --odds_csv data/raw/odds/winner_inputs/33_winner_germany_ivory_coast.csv
@@ -261,7 +261,7 @@ python src/predict/calculate_winner_ev_general.py --home Netherlands --away Swed
 python src/predict/calculate_winner_ev_general.py --generate_template data/raw/odds/winner_inputs/36_winner_tunisia_japan.csv
 python src/predict/calculate_winner_ev_general.py --home Tunisia --away Japan --odds_csv data/raw/odds/winner_inputs/36_winner_tunisia_japan.csv
 
-# ===== 6/21 =====
+# ===== 6/22 =====
 # 37: Belgium vs Iran
 python src/predict/calculate_winner_ev_general.py --generate_template data/raw/odds/winner_inputs/37_winner_belgium_iran.csv
 python src/predict/calculate_winner_ev_general.py --home Belgium --away Iran --odds_csv data/raw/odds/winner_inputs/37_winner_belgium_iran.csv
@@ -275,7 +275,7 @@ python src/predict/calculate_winner_ev_general.py --home Spain --away "Saudi Ara
 python src/predict/calculate_winner_ev_general.py --generate_template data/raw/odds/winner_inputs/40_winner_uruguay_cape_verde.csv
 python src/predict/calculate_winner_ev_general.py --home Uruguay --away "Cape Verde" --odds_csv data/raw/odds/winner_inputs/40_winner_uruguay_cape_verde.csv
 
-# ===== 6/22 =====
+# ===== 6/23 =====
 # 41: France vs Iraq
 python src/predict/calculate_winner_ev_general.py --generate_template data/raw/odds/winner_inputs/41_winner_france_iraq.csv
 python src/predict/calculate_winner_ev_general.py --home France --away Iraq --odds_csv data/raw/odds/winner_inputs/41_winner_france_iraq.csv
@@ -289,7 +289,7 @@ python src/predict/calculate_winner_ev_general.py --home Argentina --away Austri
 python src/predict/calculate_winner_ev_general.py --generate_template data/raw/odds/winner_inputs/44_winner_jordan_algeria.csv
 python src/predict/calculate_winner_ev_general.py --home Jordan --away Algeria --odds_csv data/raw/odds/winner_inputs/44_winner_jordan_algeria.csv
 
-# ===== 6/23 =====
+# ===== 6/24 =====
 # 45: Portugal vs Uzbekistan
 python src/predict/calculate_winner_ev_general.py --generate_template data/raw/odds/winner_inputs/45_winner_portugal_uzbekistan.csv
 python src/predict/calculate_winner_ev_general.py --home Portugal --away Uzbekistan --odds_csv data/raw/odds/winner_inputs/45_winner_portugal_uzbekistan.csv
@@ -303,7 +303,7 @@ python src/predict/calculate_winner_ev_general.py --home England --away Ghana --
 python src/predict/calculate_winner_ev_general.py --generate_template data/raw/odds/winner_inputs/48_winner_panama_croatia.csv
 python src/predict/calculate_winner_ev_general.py --home Panama --away Croatia --odds_csv data/raw/odds/winner_inputs/48_winner_panama_croatia.csv
 
-# ===== 6/24 =====
+# ===== 6/25 =====
 # 49: Mexico vs Czech Republic
 python src/predict/calculate_winner_ev_general.py --generate_template data/raw/odds/winner_inputs/49_winner_mexico_czech_republic.csv
 python src/predict/calculate_winner_ev_general.py --home Mexico --away "Czech Republic" --odds_csv data/raw/odds/winner_inputs/49_winner_mexico_czech_republic.csv
@@ -323,7 +323,7 @@ python src/predict/calculate_winner_ev_general.py --home Scotland --away Brazil 
 python src/predict/calculate_winner_ev_general.py --generate_template data/raw/odds/winner_inputs/54_winner_morocco_haiti.csv
 python src/predict/calculate_winner_ev_general.py --home Morocco --away Haiti --odds_csv data/raw/odds/winner_inputs/54_winner_morocco_haiti.csv
 
-# ===== 6/25 =====
+# ===== 6/26 =====
 # 55: United States vs Turkey
 python src/predict/calculate_winner_ev_general.py --generate_template data/raw/odds/winner_inputs/55_winner_united_states_turkey.csv
 python src/predict/calculate_winner_ev_general.py --home "United States" --away Turkey --odds_csv data/raw/odds/winner_inputs/55_winner_united_states_turkey.csv
@@ -343,7 +343,7 @@ python src/predict/calculate_winner_ev_general.py --home Japan --away Sweden --o
 python src/predict/calculate_winner_ev_general.py --generate_template data/raw/odds/winner_inputs/60_winner_tunisia_netherlands.csv
 python src/predict/calculate_winner_ev_general.py --home Tunisia --away Netherlands --odds_csv data/raw/odds/winner_inputs/60_winner_tunisia_netherlands.csv
 
-# ===== 6/26 =====
+# ===== 6/27 =====
 # 61: Egypt vs Iran
 python src/predict/calculate_winner_ev_general.py --generate_template data/raw/odds/winner_inputs/61_winner_egypt_iran.csv
 python src/predict/calculate_winner_ev_general.py --home Egypt --away Iran --odds_csv data/raw/odds/winner_inputs/61_winner_egypt_iran.csv
@@ -363,7 +363,7 @@ python src/predict/calculate_winner_ev_general.py --home Norway --away France --
 python src/predict/calculate_winner_ev_general.py --generate_template data/raw/odds/winner_inputs/66_winner_senegal_iraq.csv
 python src/predict/calculate_winner_ev_general.py --home Senegal --away Iraq --odds_csv data/raw/odds/winner_inputs/66_winner_senegal_iraq.csv
 
-# ===== 6/27 =====
+# ===== 6/28 =====
 # 67: Algeria vs Austria
 python src/predict/calculate_winner_ev_general.py --generate_template data/raw/odds/winner_inputs/67_winner_algeria_austria.csv
 python src/predict/calculate_winner_ev_general.py --home Algeria --away Austria --odds_csv data/raw/odds/winner_inputs/67_winner_algeria_austria.csv
@@ -382,6 +382,22 @@ python src/predict/calculate_winner_ev_general.py --home Panama --away England -
 # 72: Croatia vs Ghana
 python src/predict/calculate_winner_ev_general.py --generate_template data/raw/odds/winner_inputs/72_winner_croatia_ghana.csv
 python src/predict/calculate_winner_ev_general.py --home Croatia --away Ghana --odds_csv data/raw/odds/winner_inputs/72_winner_croatia_ghana.csv
+```
+
+### チーム成績予想・優勝予想（任意・市場が出たタイミングのみ）
+
+特定チームの最終成績（GS敗退(勝ち点別)〜ベスト32〜優勝）に賭ける市場。
+モンテカルロ（デフォルト2万回）でシミュレートするため数十秒〜数分かかる。
+
+```bash
+# (1) オッズCSVを用意: selection_key,selection_name,odds の3列
+#     selection_key: GS0-GS6 / R32 / R16 / QF / 4th / 3rd / 2nd / Champion
+# (2) 計算 → data/processed/2026/winner_matches/outcome_<team小文字>_ev.csv
+python src/predict/calculate_outcome_ev.py --team Japan --odds_csv data/raw/odds/winner_inputs/outcome_japan.csv
+
+# 優勝予想（全チーム横断のオッズ表）は1チームずつ回すより、
+# simulation_results.csv の優勝確率(%)列をオッズと直接突き合わせる方が効率的
+# （outcome_champion_ev.csv はこの方式。締切前にオッズが動いたら再突き合わせ）
 ```
 
 ---
@@ -451,6 +467,8 @@ python src/backtest/analyze_xg_value.py
 | | `--n_trials` | 30 | Optunaトライアル数 |
 | backtest.py | `--year` | 2022 | 対象大会 |
 | | `--model_dir` | 自動 | models/backtest_{year} 優先 |
+| calculate_outcome_ev.py | `--team` | (必須) | 対象チーム名 |
+| | `--sims` | 20000 | モンテカルロ試行回数 |
 
 ---
 
@@ -462,4 +480,5 @@ python src/backtest/analyze_xg_value.py
 | `data/processed/2026/simulation_results.csv` | 優勝確率（1万回モンテカルロ） |
 | `data/processed/2026/bet_recommendations.csv` | EV・ケリー基準の推奨ベット |
 | `data/processed/2026/winner_matches/*_ev.csv` | WINNER 18択の期待値 |
+| `data/processed/2026/winner_matches/outcome_<team>_ev.csv` | チーム成績予想（GS敗退〜優勝）の期待値 |
 | `data/buy_status.csv` | WINNER購入履歴・収支管理 |

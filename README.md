@@ -71,6 +71,7 @@ wcup_winner/
 │       ├── predict_scores_2026.py     # 全72試合 スコア予測・勝敗確率出力
 │       ├── bet_advisor_2026.py        # EV計算・ケリー基準ベッティング推奨
 │       ├── calculate_winner_ev_general.py # WINNER 18択期待値計算 (汎用ツール)
+│       ├── calculate_outcome_ev.py    # WINNER チーム成績予想（順位/優勝など）の期待値計算
 │       └── settle_bets_2026.py        # WINNER 自動精算・ROI集計ツール
 ├── data/
 │   ├── buy_status.csv                 # WINNER 購入履歴・結果ステータス管理
@@ -82,7 +83,7 @@ wcup_winner/
 │   │   │   ├── odds_qatar2022.csv
 │   │   │   ├── odds_russia2018.csv
 │   │   │   ├── odds_groups_2026.csv   # ★試合前に fetch_odds_2026.py で実オッズに更新
-│   │   │   └── winner_inputs/         # WINNER 18択オッズの手入力CSV
+│   │   │   └── winner_inputs/         # WINNER 18択・チーム成績予想オッズの手入力CSV
 │   │   └── squad/                     # 選手総市場価値データ（大会世代別）
 │   │       ├── squad_values_2018.csv
 │   │       ├── squad_values_2022.csv
@@ -104,7 +105,7 @@ wcup_winner/
 │           ├── simulation_results.csv
 │           ├── predicted_scores.csv
 │           ├── bet_recommendations.csv
-│           └── winner_matches/        # WINNER個別試合の期待値CSV（自動作成）
+│           └── winner_matches/        # WINNER個別試合・チーム成績予想の期待値CSV（自動作成）
 └── models/
     ├── poisson_model.joblib
     ├── lgbm_model.joblib
@@ -188,6 +189,14 @@ python src/predict/calculate_winner_ev_general.py --home Mexico --away "South Af
 # (3) または対話型でオッズを直接入力
 python src/predict/calculate_winner_ev_general.py --home Mexico --away "South Africa"
 # ※ λ（期待得点）は predicted_scores.csv から読むため、モデル更新後は predict_scores_2026.py を先に実行すること
+
+# WINNERの「チーム成績予想」期待値計算（任意。モンテカルロでGS敗退(勝ち点別)〜優勝までの確率を推定）
+# オッズCSVは selection_key,selection_name,odds の3列
+# （selection_key: GS0-GS6 / R32 / R16 / QF / 4th / 3rd / 2nd / Champion）
+# → data/processed/2026/winner_matches/outcome_<team>_ev.csv に出力
+python src/predict/calculate_outcome_ev.py --team Japan --odds_csv data/raw/odds/winner_inputs/outcome_japan.csv
+# 優勝予想（全チーム横断のオッズ表）はチーム別シミュレーションより
+# simulation_results.csv の優勝確率列とオッズを直接突き合わせる方が効率的（outcome_champion_ev.csv はこの方式）
 
 # WINNER購入結果の自動精算・ROI集計
 python src/predict/settle_bets_2026.py
@@ -334,9 +343,9 @@ python src/predict/settle_bets_2026.py
 
 | 試合 | 予測スコア | 期待得点 | 日本勝率 |
 |:---|:---:|:---:|:---:|
-| **オランダ vs 日本** (6/14) | **1-1** | 1.51 - 1.16 | **27.7%** (引き分け27.6%) |
-| **日本 vs チュニジア** (6/20) | **1-1** | 1.72 - 0.85 | **57.8%** |
-| **日本 vs スウェーデン** (6/25) | **1-1** | 1.78 - 0.99 | **55.4%** |
+| **オランダ vs 日本** (6/15) | **1-1** | 1.51 - 1.16 | **27.7%** (引き分け27.6%) |
+| **日本 vs チュニジア** (6/21) | **1-1** | 1.72 - 0.85 | **57.8%** |
+| **日本 vs スウェーデン** (6/26) | **1-1** | 1.78 - 0.99 | **55.4%** |
 
 > R32（グループ突破）確率: **84.6%** / R16進出確率: **39.6%**
 
@@ -344,9 +353,9 @@ python src/predict/settle_bets_2026.py
 
 | 試合 | 賭けタイプ | オッズ | **EV** |
 |:---|:---|:---:|:---:|
-| ブラジル vs ハイチ (6/13) | ハイチ勝利 | 29.05 | **1.798** |
+| ブラジル vs ハイチ (6/20) | ハイチ勝利 | 29.05 | **1.798** |
 | ノルウェー vs イラク (6/17) | イラク勝利 | 14.40 | **1.669** |
-| ドイツ vs キュラソー (6/14) | 引き分け | 19.00 | **1.640** |
+| ドイツ vs キュラソー (6/15) | 引き分け | 19.00 | **1.640** |
 
 > EVが2.0を超える推奨はサニティチェックで自動除外される（オッズデータ異常の疑い）。
 > 弱小国相手の高オッズには依然高EVが出やすい（モデルと市場の見解相違）。

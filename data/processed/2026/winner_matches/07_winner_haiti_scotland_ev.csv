@@ -1,6 +1,6 @@
-Selection,Odds,Probability(%),Expected Value (EV),Half-Kelly Fraction,"Recommended Stake (Bankroll: 100,000 JPY)"
-Haiti その他(4得点以上),58.4,1.88,1.0958,0.00083,83.0
-引き分け 1-1,8.2,13.21,1.0831,0.00577,577.0
+Selection,Odds,Probability(%),Expected Value (EV),Half-Kelly Fraction,"Recommended Stake (Bankroll: 60,000 JPY)"
+Haiti その他(4得点以上),58.4,1.88,1.0958,0.00083,50.0
+引き分け 1-1,8.2,13.21,1.0831,0.00577,346.0
 Haiti 3-1,47.1,2.08,0.982,0.0,0.0
 Haiti 2-1,14.3,6.16,0.8803,0.0,0.0
 引き分け 2-2,18.0,4.76,0.8566,0.0,0.0

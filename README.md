@@ -204,6 +204,97 @@ python src/predict/settle_bets_2026.py
 
 ---
 
+## 処理・データフロー
+
+```mermaid
+flowchart TD
+    subgraph S1["① データ収集・特徴量・学習"]
+        DL["download_data.py"] --> RES[("results.csv / shootouts.csv")]
+        RES --> ELO["elo.py"] --> RWE[("results_with_elo.csv")]
+        SQ[("squad_values_2018/22/26.csv")] --> PRE["preprocess.py"]
+        RWE --> PRE
+        ALT["altitude.py（開催都市の標高）"] --> PRE
+        PRE --> FEAT[("features.csv（95特徴量）")]
+        FEAT --> TRAIN["train_model.py<br/>Poisson + LGBM + XGB"]
+        TRAIN --> MODELS[("models/*.joblib")]
+    end
+
+    subgraph S2["② 2026予測・シミュレーション"]
+        FEAT --> PS["predict_scores_2026.py"]
+        MODELS --> PS
+        PS --> PSCORES[("predicted_scores.csv<br/>λ・1X2確率")]
+        FEAT --> SIM["simulator_2026.py<br/>モンテカルロ"]
+        MODELS --> SIM
+        SIM --> SIMRES[("simulation_results.csv<br/>優勝確率")]
+    end
+
+    subgraph S3["③ ブックメーカー・ベッティング推奨"]
+        PREPO["prepare_odds_2026_groups.py<br/>推定オッズ初期生成"] --> OG[("odds_groups_2026.csv")]
+        FETCH["fetch_odds_2026.py<br/>The-Odds-API（実オッズ）"] -. 上書き .-> OG
+        PSCORES --> ADV["bet_advisor_2026.py<br/>--market_blend / --kelly / --bankroll"]
+        OG --> ADV
+        ADV --> BETREC[("bet_recommendations.csv<br/>EV・推奨額")]
+    end
+
+    subgraph S4["④ WINNER（オッズは手入力）"]
+        GEN["calculate_winner_ev_general.py<br/>--generate_template"] --> TMPL[("winner_inputs/NN_winner_x_y.csv<br/>空テンプレート")]
+        TMPL -. ユーザーがWINNERのオッズをodds列に記入 .-> WIN[("winner_inputs/NN_winner_x_y.csv<br/>（記入済み）")]
+        PSCORES --> WEV["calculate_winner_ev_general.py<br/>--home --away --odds_csv --bankroll"]
+        WIN --> WEV
+        WEV --> WEVOUT[("winner_matches/NN_winner_x_y_ev.csv<br/>EV・half-Kelly・推奨購入額")]
+        OUTIN[("winner_inputs/outcome_team.csv<br/>順位オッズを手入力")] --> OEV["calculate_outcome_ev.py<br/>--team --odds_csv --bankroll"]
+        SIM --> OEV
+        OEV --> OEVOUT[("winner_matches/outcome_team_ev.csv")]
+    end
+
+    subgraph S5["⑤ 購入記録・自動精算"]
+        WEVOUT -. 購入を記録 .-> BUY[("buy_status.csv")]
+        BETREC -. 購入を記録 .-> BUY
+        OEVOUT -. 購入を記録 .-> BUY
+        RES --> SETTLE["settle_bets_2026.py<br/>的中判定・ROI集計"]
+        BUY --> SETTLE
+        SETTLE -. status/結果を更新 .-> BUY
+    end
+```
+
+> 大会中は ① の `download_data → elo → preprocess` を回して最新結果を反映し、
+> ②③④ を再実行すると予測・EV・推奨額が更新される（[データ更新フロー](#データ更新フロー大会中) 参照）。
+
+### WINNER オッズの取り入れ方（手入力フロー）
+
+WINNER のオッズは API では取得できない（日本国内くじのため）ので、**手入力**でモデルに取り込む。
+モデルが出すのは「確率（λ由来）」だけで、**オッズは人間が WINNER の販売画面から CSV に転記**し、
+スクリプトが「確率 × オッズ」で EV と推奨購入額を計算する、という分業になっている。
+
+**個別試合（18択：スコア＋「その他」）の場合**
+
+1. **テンプレート生成**（初回のみ）
+   `calculate_winner_ev_general.py --generate_template data/raw/odds/winner_inputs/NN_winner_x_y.csv`
+   → `selection_key, selection_name, odds` の3列を持つ空CSVが生成される
+2. **オッズを手入力** — 生成された CSV の `odds` 列に、WINNER の各選択肢のオッズを転記する
+   （例: `H_1-0,ホーム 1-0,10.6` / `away_other,アウェイ その他(4得点以上),5.3`）
+3. **EV 計算** — `calculate_winner_ev_general.py --home X --away Y --odds_csv …/NN_winner_x_y.csv --bankroll 60000`
+   → `predicted_scores.csv` から λ を読み、Dixon-Coles 行列で各スコアの確率を出し、手入力オッズと
+   突き合わせて `winner_matches/NN_winner_x_y_ev.csv`（EV・half-Kelly・推奨購入額）を出力する
+   ※ モデルを更新したら、先に `predict_scores_2026.py` を実行して λ を最新化すること
+
+**チーム成績予想（順位：GS敗退〜優勝）の場合**
+
+1. `winner_inputs/outcome_team.csv` に `selection_key, selection_name, odds`（順位オッズ）を手入力
+   （`selection_key`: GS0–GS6 / R32 / R16 / QF / 4th / 3rd / 2nd / Champion）
+2. `calculate_outcome_ev.py --team Japan --odds_csv …/outcome_team.csv --bankroll 60000`
+   → `simulator_2026` のモンテカルロで各順位の確率を推定し、手入力オッズと突き合わせて
+   `winner_matches/outcome_team_ev.csv` を出力する
+
+**購入と精算** — 実際に購入したら `buy_status.csv` に1行記録し、`settle_bets_2026.py` が
+`results.csv` の最新結果と突合して的中判定・ROI を自動更新する。
+
+> ブックメーカー側（③）との違いは「オッズの入手元」だけ。③は The-Odds-API から実オッズを
+> 自動取得（`odds_groups_2026.csv`）、④の WINNER は手入力（`winner_inputs/`）。確率の出どころ
+> （モデルの λ・モンテカルロ）と EV・ケリーの計算ロジックは共通している。
+
+---
+
 ## モデルアーキテクチャ
 
 ### 予測モデル（アンサンブル）
@@ -243,10 +334,44 @@ python src/predict/settle_bets_2026.py
 - **二変量Poisson行列**: 1X2はわずかに改善するがスコア市場（WINNER）の精度が悪化するため不採用
   （`walkforward.py --mode matrix` で再検証可能）
 - **スタッキング・メタ学習器**: 固定ブレンドに勝てず不採用（`--mode stack` で再検証可能）
+- **pi-ratings（Constantinou & Fenton 2013）**: ホーム/アウェイ別の動的レーティングから
+  試合前の期待得失点差を算出する手法。先行研究（2023 Soccer Prediction Challenge 等）で
+  1X2・正確スコアの上位特徴量とされるため、λアンサンブルの**追加成分**として検証した
+  （2026-06-13。Eloとの差し替えではなく併用）。全国際試合のみから計算でき MLモデル再学習が
+  不要な点を活かし、`walkforward_predictions.csv` にマージして評価。
+  結果: λ=(1-w)·(Poisson+LGBM) + w·pi の重み掃引で、**w≈0.10 のとき全評価8,112試合の
+  Log Loss が 0.86305→0.86222 と小幅改善（Brierも改善）する一方、W杯128試合の Log Loss は
+  1.00646→1.00645 とほぼ不変**だった（等分1/3はpiを混ぜ過ぎてW杯を悪化させる）。
+  GLM/XGB回帰/チームIDと異なり「ベースラインを改善しW杯を悪化させない」初の追加成分だが、
+  改善幅は約0.1%と小さく、賭け対象のW杯では測定可能な利益が出ない（128試合では差を検出できない）
+  ため、**本番には組み込まず検証済みに留める**。実装は `src/pipeline/pi_ratings.py`（中立地対応版
+  あり）と `src/backtest/eval_pi_ratings.py` に保持し、再検証可能。
+  （本評価の土台は P+L のみで、本番λアンサンブルの LGBM-cat 成分は未考慮。本採用検討時は
+  cat 込みで再評価のこと）
+- **確率較正（Post-hoc Calibration）**: 最終ブレンド1X2確率に温度スケーリング／ベクトル（行列）
+  スケーリングを年次ウォークフォワード（その年より前で較正パラメータを学習→その年に適用）で
+  検証したが、**いずれも逆効果で不採用**（2026-06-13検証）。較正前の時点で
+  Log Loss 0.85857 / ECE 0.0123 と既に良較正であり、クラス別の平均予測と実頻度も
+  予測[H 0.4725 / D 0.2307 / A 0.2925] ≒ 実績[H 0.4766 / D 0.2309 / A 0.2925]
+  と引き分けバイアスを含めほぼ一致していた。`cls_blend`・市場シュリンクを Log Loss で
+  最適化済みのため最終確率が既に較正されているのは整合的。
+  （再検証は `walkforward_predictions.csv` の出力に scaling を適用して評価できる）
 - **xG（期待ゴール）**: StatsBombオープンデータ（2018・2022年W杯128試合）での検証で、
   「過去のxG平均」は「過去の得点平均」より次戦の得点予測力が高い（失点側は相関+0.017→+0.125）
   ことを確認済み。全国際試合の継続的なxGソースを確保できれば特徴量化する価値が大きい
-  （取得: `src/pipeline/fetch_statsbomb_xg.py` / 検証: `src/backtest/analyze_xg_value.py`）
+  （取得: `src/pipeline/fetch_statsbomb_xg.py` / 検証: `src/backtest/analyze_xg_value.py`）。
+  ただし2026-06-13のデータソース調査の結論として、**全国際試合（友好試合・予選を含む）を
+  連続的にカバーする無料のxGソースは存在しない**ため、特徴量化は現状保留:
+    - *StatsBomb open*: 無料・高品質だが大会単位の島状（現在はWC18/22・Euro20/24・
+      CopaAmérica24・AFCON23等 約10国際大会／男子≈450試合に拡大）。友好試合・予選は無し
+    - *FBref/Opta*: 親善・予選を含む広域でxGを2017年頃から提供していたが、Optaが
+      2026年1月にFBref向け供給を停止したため将来の継続性が断たれた（スクレイプも403で不可）
+    - *Understat*: クラブリーグのみで国際試合は対象外
+    - *API-Football*: `/fixtures/statistics` で `expected_goals` を提供し国際試合もカバーするが、
+      無料プランはシーズン2021–2023のみ（100req/日）で、**2026年W杯のxG取得には有料サブスクが必須**
+  検証済みの効き（相関改善）は「大会内ウォークフォワード」＝島状の文脈で得られたものであり、
+  最も有望なのは「2026年W杯のライブxGを各節後に取り込み、大会内のrolling xG（攻=xG／守=xGA）を
+  次戦のλへ反映する」アプローチ。これには有料API-Football（W杯期間のみ）等の継続ソースが前提となる。
 
 ### 主要特徴量（95個）
 

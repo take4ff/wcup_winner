@@ -3,14 +3,14 @@ date,home_team,away_team,selection,odds,Probability(%),EV,buy_amount_yen,match_r
 2026-06-12,South Korea,Czech Republic,South Korea その他,23.3,7.0,1.631,600.0,2-1,0.0,lost
 2026-06-13,Canada,Bosnia and Herzegovina,Canada その他,13.9,14.11,1.961,0.0,1-1,0.0,lost
 2026-06-13,United States,Paraguay,paraguay その他,35.2,2.82,0.993,0.0,4-1,0.0,lost
-2026-06-14,Qatar,Switzerland,Switzerland その他,5.3,21.81,1.1562,600,,,
-2026-06-14,Brazil,Morocco,0-0,10.5,9.4,0.9874,0.0,,,
-2026-06-14,Haiti,Scotland,1-1,8.2,13.21,1.0831,600,,,
-2026-06-14,Australia,Turkey,Turkey その他,17.7,5.47,0.9687,0.0,,,
-2026-06-15,Germany,Curaçao,,,,,,,,
-2026-06-15,Ivory Coast,Ecuador,,,,,,,,
-2026-06-15,Netherlands,Japan,,,,,,,,
-2026-06-15,Sweden,Tunisia,,,,,,,,
+2026-06-14,Qatar,Switzerland,Switzerland その他,5.3,21.81,1.1562,600,1-1,0.0,lost
+2026-06-14,Brazil,Morocco,0-0,10.5,9.4,0.9874,0.0,1-1,0.0,lost
+2026-06-14,Haiti,Scotland,1-1,8.2,13.21,1.0831,600,0-1,0.0,lost
+2026-06-14,Australia,Turkey,Turkey その他,17.7,5.47,0.9687,0.0,2-0,0.0,lost
+2026-06-15,Germany,Curaçao,1-1,16.8,6.41,1.0765,200,,,
+2026-06-15,Ivory Coast,Ecuador,Ecuador その他,26.3,5.33,1.4006,400,,,
+2026-06-15,Netherlands,Japan,Netherlands その他,23.6,6.2,1.4621,600,,,
+2026-06-15,Sweden,Tunisia,Tunisia その他,40.2,4.79,1.927,600,,,
 2026-06-16,Belgium,Egypt,,,,,,,,
 2026-06-16,Iran,New Zealand,,,,,,,,
 2026-06-16,Saudi Arabia,Uruguay,,,,,,,,

@@ -43,22 +43,22 @@ date,home_team,away_team,selection,odds,Probability(%),EV,buy_amount_yen,match_r
 2026-06-23,France,Iraq,1-1,16.3,7.40,1.206,400,3-0,0,lost
 2026-06-23,Norway,Senegal,0-0,11.4,7.85,0.8952,0,3-2,0,lost
 2026-06-23,Jordan,Algeria,Algeria その他,7.6,11.35,0.863,0,1-2,0,lost
-2026-06-24,Portugal,Uzbekistan,,,,,,,,
-2026-06-24,England,Ghana,,,,,,,,
-2026-06-24,Panama,Croatia,,,,,,,,
-2026-06-24,Colombia,DR Congo,,,,,,,,
-2026-06-25,Bosnia and Herzegovina,Qatar,,,,,,,,
-2026-06-25,Canada,Switzerland,,,,,,,,
-2026-06-25,Mexico,Czech Republic,,,,,,,,
-2026-06-25,Morocco,Haiti,,,,,,,,
-2026-06-25,Scotland,Brazil,,,,,,,,
-2026-06-25,South Africa,South Korea,,,,,,,,
-2026-06-26,Curaçao,Ivory Coast,,,,,,,,
-2026-06-26,Ecuador,Germany,,,,,,,,
-2026-06-26,Japan,Sweden,,,,,,,,
-2026-06-26,Paraguay,Australia,,,,,,,,
-2026-06-26,Tunisia,Netherlands,,,,,,,,
-2026-06-26,United States,Turkey,,,,,,,,
+2026-06-24,Portugal,Uzbekistan,Uzbekistan その他,129.1,1.0,1.2909,0,5-0,0,lost
+2026-06-24,England,Ghana,0-0,17.2,4.41,0.7588,0,0-0,0,won
+2026-06-24,Panama,Croatia,Panama その他,84.6,2.39,2.0218,0,0-1,0,lost
+2026-06-24,Colombia,DR Congo,0-0,8.9,9.45,0.8407,0,1-0,0,lost
+2026-06-25,Switzerland,Canada,Canada その他,20.0,4.0,0.7995,0,2-1,0,lost
+2026-06-25,Bosnia and Herzegovina,Qatar,1-1,5.6,13.59,0.7609,0,3-1,0,lost
+2026-06-25,Morocco,Haiti,1-1,10.5,10.41,1.0928,200,4-2,0,lost
+2026-06-25,Scotland,Brazil,1-1,7.7,10.4,0.8008,0,0-3,0,lost
+2026-06-25,Czech Republic,Mexico,Mexico その他,8.0,13.96,1.1165,600,0-3,0,lost
+2026-06-25,South Africa,South Korea,South Korea その他,12.9,9.97,1.2859,600,1-0,0,lost
+2026-06-26,Ecuador,Germany,1-1,7.9,12.97,1.0248,0,2-1,,
+2026-06-26,Curaçao,Ivory Coast,1-1,6.8,11.3,0.7685,0,0-2,,
+2026-06-26,Japan,Sweden,1-1,7.9,11.62,0.9183,0,,,
+2026-06-26,Tunisia,Netherlands,1-1,11.8,7.93,0.936,0,,,
+2026-06-26,United States,Turkey,1-1,6.8,11.42,0.7764,,,,
+2026-06-26,Paraguay,Australia,Paraguay その他,29.8,2.85,0.8504,0,,,
 2026-06-27,Cape Verde,Saudi Arabia,,,,,,,,
 2026-06-27,Egypt,Iran,,,,,,,,
 2026-06-27,New Zealand,Belgium,,,,,,,,

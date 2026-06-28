@@ -546,6 +546,77 @@ def simulate_tournament(lambda_cache):
     return progress
 
 
+# ===================================================================
+# 確定R32ブラケット（グループステージ終了後に設定）
+# ===================================================================
+CONFIRMED_R32 = {
+    73: ('South Africa',          'Canada'),
+    74: ('Germany',               'Paraguay'),
+    75: ('Netherlands',           'Morocco'),
+    76: ('Brazil',                'Japan'),
+    77: ('France',                'Sweden'),
+    78: ('Ivory Coast',           'Norway'),
+    79: ('Mexico',                'Ecuador'),
+    80: ('England',               'DR Congo'),
+    81: ('United States',         'Bosnia and Herzegovina'),
+    82: ('Belgium',               'Senegal'),
+    83: ('Portugal',              'Croatia'),
+    84: ('Spain',                 'Austria'),
+    85: ('Switzerland',           'Algeria'),
+    86: ('Argentina',             'Cape Verde'),
+    87: ('Colombia',              'Ghana'),
+    88: ('Australia',             'Egypt'),
+}
+
+
+def simulate_from_r32(lambda_cache):
+    """確定R32ブラケットからノックアウトステージのみシミュレート"""
+    all_teams = set()
+    for ta, tb in CONFIRMED_R32.values():
+        all_teams.add(ta)
+        all_teams.add(tb)
+
+    progress = {t: 'R32' for t in all_teams}
+    winners = {}
+
+    for match_no, (ta, tb) in CONFIRMED_R32.items():
+        win, _ = simulate_knockout_match(ta, tb, lambda_cache)
+        winners[match_no] = win
+
+    for match_no_r16, (ma, mb) in enumerate(R16_PAIRS, start=89):
+        ta, tb = winners[ma], winners[mb]
+        progress[ta] = 'R16'
+        progress[tb] = 'R16'
+        win, _ = simulate_knockout_match(ta, tb, lambda_cache)
+        winners[match_no_r16] = win
+
+    for match_no_qf, (ma, mb) in enumerate(QF_PAIRS, start=97):
+        ta, tb = winners[ma], winners[mb]
+        progress[ta] = 'QF'
+        progress[tb] = 'QF'
+        win, _ = simulate_knockout_match(ta, tb, lambda_cache)
+        winners[match_no_qf] = win
+
+    finalists, losers = [], []
+    for match_no_sf, (ma, mb) in enumerate(SF_PAIRS, start=101):
+        ta, tb = winners[ma], winners[mb]
+        progress[ta] = 'SF'
+        progress[tb] = 'SF'
+        win, loss = simulate_knockout_match(ta, tb, lambda_cache)
+        progress[win] = 'Final'
+        finalists.append(win)
+        losers.append(loss)
+
+    third, _ = simulate_knockout_match(losers[0], losers[1], lambda_cache)
+    progress[third] = '3rd'
+
+    champion, runner_up = simulate_knockout_match(finalists[0], finalists[1], lambda_cache)
+    progress[champion] = 'Champion'
+    progress[runner_up] = '2nd'
+
+    return progress
+
+
 def main():
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
     features_path        = os.path.join(base_dir, "data/processed/features.csv")
@@ -573,8 +644,16 @@ def main():
     lambda_cache = precompute_all_lambdas(team_feats, model_poisson, model_lgbm, feature_cols,
                                           model_lgbm_cat, team_categories)
 
-    num_simulations = 10000
-    print(f"Running Monte Carlo Simulation ({num_simulations} iterations)...\n")
+    import argparse
+    parser = argparse.ArgumentParser(description='2026年W杯 モンテカルロシミュレーター')
+    parser.add_argument('--from_r32', action='store_true',
+                        help='確定R32ブラケットからシミュレート（グループステージをスキップ）')
+    parser.add_argument('--n', type=int, default=10000, help='シミュレーション回数 (default: 10000)')
+    args = parser.parse_args()
+
+    num_simulations = args.n
+    mode = "確定R32ブラケット" if args.from_r32 else "グループステージから"
+    print(f"Running Monte Carlo Simulation ({num_simulations} iterations, {mode})...\n")
 
     stage_counts = defaultdict(lambda: defaultdict(int))
 
@@ -582,7 +661,11 @@ def main():
         if (sim + 1) % 2000 == 0:
             print(f"  Completed {sim + 1} simulations...")
 
-        progress = simulate_tournament(lambda_cache)
+        if args.from_r32:
+            progress = simulate_from_r32(lambda_cache)
+        else:
+            progress = simulate_tournament(lambda_cache)
+
         for team, stage in progress.items():
             stage_counts[team][stage] += 1
             if stage in ['Champion', '2nd', '3rd', 'Final', 'SF', 'QF', 'R16', 'R32']:
@@ -598,35 +681,54 @@ def main():
             if stage == 'Champion':
                 stage_counts[team]['Champion_Count'] += 1
 
+    # R32モードは確定32チームのみ出力、通常モードは全48チーム
+    if args.from_r32:
+        target_teams = list(set(t for match in CONFIRMED_R32.values() for t in match))
+    else:
+        target_teams = list(team_feats.keys())
+
     rows = []
-    for team in team_feats.keys():
+    for team in target_teams:
         elo_val = round(team_feats[team]['elo'], 1)
         c = stage_counts[team]
         grp = next((g for g, ts in GROUPS_2026.items() if team in ts), '?')
         rows.append({
             'team': team, 'group': grp, 'elo': elo_val,
-            'R32_Prob':    round((c['Reached_R32']   / num_simulations) * 100, 2),
             'R16_Prob':    round((c['Reached_R16']   / num_simulations) * 100, 2),
             'QF_Prob':     round((c['Reached_QF']    / num_simulations) * 100, 2),
             'SF_Prob':     round((c['Reached_SF']    / num_simulations) * 100, 2),
             'Final_Prob':  round((c['Reached_Final'] / num_simulations) * 100, 2),
             'Winner_Prob': round((c['Champion_Count'] / num_simulations) * 100, 2),
         })
+        if not args.from_r32:
+            rows[-1]['R32_Prob'] = round((c['Reached_R32'] / num_simulations) * 100, 2)
 
-    df_results = pd.DataFrame(rows).sort_values(by='Winner_Prob', ascending=False).reset_index(drop=True)
+    col_order = ['team', 'group', 'elo']
+    if not args.from_r32:
+        col_order.append('R32_Prob')
+    col_order += ['R16_Prob', 'QF_Prob', 'SF_Prob', 'Final_Prob', 'Winner_Prob']
 
-    print("\n================ TOP 15 SIMULATION RESULTS (WINNER PROBABILITY) ================")
-    print(df_results.head(15).to_string(index=False))
-    print("=================================================================================\n")
+    df_results = (pd.DataFrame(rows)
+                    .reindex(columns=col_order)
+                    .sort_values(by='Winner_Prob', ascending=False)
+                    .reset_index(drop=True))
 
-    focus_teams = ['Japan', 'Brazil', 'Argentina', 'France', 'England', 'Germany',
-                   'Spain', 'United States', 'Canada', 'Mexico', 'Morocco', 'Portugal']
-    print("================ SPECIFIC TEAMS PROBABILITY ================")
-    print(df_results[df_results['team'].isin(focus_teams)].to_string(index=False))
-    print("============================================================\n")
+    n_show = len(df_results) if args.from_r32 else 15
+    label = "全32チーム（確定R32ブラケット）" if args.from_r32 else "TOP 15"
+    print(f"\n================ {label} SIMULATION RESULTS ================")
+    print(df_results.head(n_show).to_string(index=False))
+    print("=" * 70 + "\n")
 
-    df_results.to_csv(output_path, index=False)
-    print(f"Simulation results saved to {output_path}")
+    if not args.from_r32:
+        focus_teams = ['Japan', 'Brazil', 'Argentina', 'France', 'England', 'Germany',
+                       'Spain', 'United States', 'Canada', 'Mexico', 'Morocco', 'Portugal']
+        print("================ SPECIFIC TEAMS PROBABILITY ================")
+        print(df_results[df_results['team'].isin(focus_teams)].to_string(index=False))
+        print("============================================================\n")
+
+    out = output_path if not args.from_r32 else output_path.replace('.csv', '_r32.csv')
+    df_results.to_csv(out, index=False)
+    print(f"Simulation results saved to {out}")
 
 
 if __name__ == "__main__":

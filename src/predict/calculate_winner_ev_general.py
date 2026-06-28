@@ -155,7 +155,7 @@ def main():
     parser = argparse.ArgumentParser(description="汎用WINNER期待値計算ツール")
     parser.add_argument("--home", type=str, help="ホームチーム名")
     parser.add_argument("--away", type=str, help="アウェイチーム名")
-    parser.add_argument("--bankroll", type=float, default=100000.0, help="想定総資金 (単位: 円)")
+    parser.add_argument("--bankroll", type=float, default=104700.0, help="想定総資金 (単位: 円)")
     parser.add_argument("--odds_csv", type=str, help="18択オッズを記載したCSVファイル")
     parser.add_argument("--out_csv", type=str, help="結果を出力するCSVファイルのパス")
     parser.add_argument("--match_no", type=str, help="試合の連番（例: 01）")

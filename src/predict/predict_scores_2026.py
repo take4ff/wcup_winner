@@ -173,9 +173,61 @@ def main():
 
     print("\n" + "=" * 90)
 
+    # === R32 決勝トーナメント（確定対戦カード）の予測 ===
+    R32_FIXTURES = [
+        # (home, away, date, FIFA_match_no)
+        ('South Africa',            'Canada',                   '2026-06-28', 73),
+        ('Brazil',                  'Japan',                    '2026-06-29', 76),
+        ('Germany',                 'Paraguay',                 '2026-06-29', 74),
+        ('Netherlands',             'Morocco',                  '2026-06-29', 75),
+        ('France',                  'Sweden',                   '2026-06-30', 77),
+        ('Ivory Coast',             'Norway',                   '2026-06-30', 78),
+        ('Mexico',                  'Ecuador',                  '2026-06-30', 79),
+        ('England',                 'DR Congo',                 '2026-07-01', 80),
+        ('United States',           'Bosnia and Herzegovina',   '2026-07-01', 81),
+        ('Belgium',                 'Senegal',                  '2026-07-01', 82),
+        ('Portugal',                'Croatia',                  '2026-07-02', 83),
+        ('Spain',                   'Austria',                  '2026-07-02', 84),
+        ('Switzerland',             'Algeria',                  '2026-07-02', 85),
+        ('Argentina',               'Cape Verde',               '2026-07-03', 86),
+        ('Colombia',                'Ghana',                    '2026-07-03', 87),
+        ('Australia',               'Egypt',                    '2026-07-03', 88),
+    ]
+
+    print("\n" + "=" * 90)
+    print(f"{'R32':<4} {'Home':<25} {'Pred':^7} {'Away':<25} "
+          f"{'λH':>5} {'λA':>5}  {'Home%':>6} {'Draw%':>6} {'Away%':>6}  {'MostLikelyProb':>14}")
+    print("=" * 90)
+
+    for home, away, date, fifa_no in R32_FIXTURES:
+        res = predict_match_score(home, away, lambda_cache,
+                                  cls_proba_cache=cls_proba_cache,
+                                  cls_blend=args.cls_blend)
+        score_str = f"{res['pred_a']}-{res['pred_b']}"
+        print(f" M{fifa_no:<3} {home:<25} {score_str:^7} {away:<25} "
+              f"{res['lambda_a']:>5.2f} {res['lambda_b']:>5.2f}  "
+              f"{res['p_win_a']:>5.1f}% {res['p_draw']:>5.1f}% {res['p_win_b']:>5.1f}%  "
+              f"{res['pred_score_prob']:>5.1f}%")
+        records.append({
+            'group': f'R32_M{fifa_no}', 'home_team': home, 'away_team': away,
+            'pred_home_score': res['pred_a'],
+            'pred_away_score': res['pred_b'],
+            'pred_score_str':  score_str,
+            'pred_score_prob': res['pred_score_prob'],
+            'lambda_home': res['lambda_a'],
+            'lambda_away': res['lambda_b'],
+            'p_home_win': res['p_win_a'],
+            'p_draw':     res['p_draw'],
+            'p_away_win': res['p_win_b'],
+        })
+
+    print("\n" + "=" * 90)
+
     df_out = pd.DataFrame(records)
     df_out.to_csv(output_path, index=False)
-    print(f"\nSaved all {len(df_out)} match predictions to: {output_path}")
+    group_count = df_out[~df_out['group'].str.startswith('R32')].shape[0]
+    r32_count = df_out[df_out['group'].str.startswith('R32')].shape[0]
+    print(f"\nSaved {group_count} group stage + {r32_count} R32 predictions to: {output_path}")
 
     # === 日本代表の所属グループのみ詳細表示 ===
     japan_group = next((g for g, ts in GROUPS_2026.items() if 'Japan' in ts), None)

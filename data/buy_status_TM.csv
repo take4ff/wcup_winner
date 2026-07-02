@@ -3,12 +3,12 @@ date,home_team,away_team,round,selection,odds,Probability(%),EV,buy_amount_yen,m
 2026-06-30,Brazil,Japan,32,0-0,12.6,8.19,1.0326,0,2-1,0,lost
 2026-06-30,Germany,Paraguay,32,Paraguay その他,60.6,1.95,1.18,0,"1-1 Paraguay ",0,lost
 2026-06-30,Netherlands,Morocco,32,1-1,6.2,13.28,0.8235,0,1-1 Morocco,0,won
-2026-07-01,France,Sweden,32,0-0,9.9,9.22,0.9132
-2026-07-01,Ivory Coast,Norway,32,0-0,9.9,9.22,0.9132
-2026-07-01,Mexico,Ecuador,32,0-0,6.8,15.11,1.0274
-2026-07-02,England,DR Congo,32
-2026-07-02,United States,Bosnia and Herzegovina,32
-2026-07-02,Belgium,Senegal,32
+2026-07-01,France,Sweden,32,0-0,9.9,9.22,0.9132,0,3-0,0,lost
+2026-07-01,Ivory Coast,Norway,32,0-0,9.9,9.22,0.9132,0,1-2,0,lost
+2026-07-01,Mexico,Ecuador,32,0-0,6.8,15.11,1.0274,0,2-0,0,lost
+2026-07-02,England,DR Congo,32,1-1,7.9,9.91,0.7831,0,2-1,0,lost
+2026-07-02,United States,Bosnia and Herzegovina,32,United States その他,5.2,17.21,0.8951,0,2-0,0,lost
+2026-07-02,Belgium,Senegal,32,Belgium その他,11.5,10.86,1.249,1200,3-2,0,lost
 2026-07-03,Portugal,Croatia,32
 2026-07-03,Spain,Austria,32
 2026-07-03,Switzerland,Algeria,32

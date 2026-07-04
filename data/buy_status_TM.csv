@@ -11,7 +11,15 @@ date,home_team,away_team,round,selection,odds,Probability(%),EV,buy_amount_yen,m
 2026-07-02,Belgium,Senegal,32,Belgium その他,11.5,10.86,1.249,1200,3-2,0,lost
 2026-07-03,Portugal,Croatia,32,Portugal その他,14.8,12.62,1.8676,3200,2-1,0,lost
 2026-07-03,Spain,Austria,32,Spain その他,4.9,17.74,0.8695,0,3-0,0,lost
-2026-07-03,Switzerland,Algeria,32,Algeria その他,39.9,2.59,1.0348
-2026-07-04,Argentina,Cape Verde,32,,,,
-2026-07-04,Colombia,Ghana,32
-2026-07-04,Australia,Egypt,32
+2026-07-03,Switzerland,Algeria,32,Algeria その他,39.9,2.59,1.0348,0,2-0,0,lost
+2026-07-04,Argentina,Cape Verde,32,1-0,6.7,11.13,0.746,0,3-2,0,lost
+2026-07-04,Colombia,Ghana,32,Colombia その他,8.8,16.29,1.4337,3200,1-0,0,lost
+2026-07-04,Australia,Egypt,32,Australia その他,41.2,2.96,1.2207,0,1-1 Egypt,0,lost
+2026-07-05,Canada,Morocco,16
+2026-07-05,Paraguay,France,16
+2026-07-06,Brazil,Norway,16
+2026-07-06,Mexico,England,16
+2026-07-07,Portugal,Spain,16
+2026-07-07,United States,Belgium,16
+2026-07-08,Argentina,Egypt,16
+2026-07-08,Switzerland,Colombia,16

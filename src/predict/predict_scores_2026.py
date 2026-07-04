@@ -223,11 +223,53 @@ def main():
 
     print("\n" + "=" * 90)
 
+    R16_FIXTURES = [
+        # (home, away, date, FIFA_match_no)
+        ('Canada',         'Morocco',   '2026-07-06', 89),
+        ('Paraguay',       'France',    '2026-07-06', 90),
+        ('Brazil',         'Norway',    '2026-07-07', 91),
+        ('Mexico',         'England',   '2026-07-07', 92),
+        ('Portugal',       'Spain',     '2026-07-08', 93),
+        ('United States',  'Belgium',   '2026-07-08', 94),
+        ('Argentina',      'Egypt',     '2026-07-09', 95),
+        ('Switzerland',    'Colombia',  '2026-07-09', 96),
+    ]
+
+    print("\n" + "=" * 90)
+    print(f"{'R16':<4} {'Home':<25} {'Pred':^7} {'Away':<25} "
+          f"{'λH':>5} {'λA':>5}  {'Home%':>6} {'Draw%':>6} {'Away%':>6}  {'MostLikelyProb':>14}")
+    print("=" * 90)
+
+    for home, away, date, fifa_no in R16_FIXTURES:
+        res = predict_match_score(home, away, lambda_cache,
+                                  cls_proba_cache=cls_proba_cache,
+                                  cls_blend=args.cls_blend)
+        score_str = f"{res['pred_a']}-{res['pred_b']}"
+        print(f" M{fifa_no:<3} {home:<25} {score_str:^7} {away:<25} "
+              f"{res['lambda_a']:>5.2f} {res['lambda_b']:>5.2f}  "
+              f"{res['p_win_a']:>5.1f}% {res['p_draw']:>5.1f}% {res['p_win_b']:>5.1f}%  "
+              f"{res['pred_score_prob']:>5.1f}%")
+        records.append({
+            'group': f'R16_M{fifa_no}', 'home_team': home, 'away_team': away,
+            'pred_home_score': res['pred_a'],
+            'pred_away_score': res['pred_b'],
+            'pred_score_str':  score_str,
+            'pred_score_prob': res['pred_score_prob'],
+            'lambda_home': res['lambda_a'],
+            'lambda_away': res['lambda_b'],
+            'p_home_win': res['p_win_a'],
+            'p_draw':     res['p_draw'],
+            'p_away_win': res['p_win_b'],
+        })
+
+    print("\n" + "=" * 90)
+
     df_out = pd.DataFrame(records)
     df_out.to_csv(output_path, index=False)
-    group_count = df_out[~df_out['group'].str.startswith('R32')].shape[0]
+    group_count = df_out[~df_out['group'].str.startswith(('R32', 'R16'))].shape[0]
     r32_count = df_out[df_out['group'].str.startswith('R32')].shape[0]
-    print(f"\nSaved {group_count} group stage + {r32_count} R32 predictions to: {output_path}")
+    r16_count = df_out[df_out['group'].str.startswith('R16')].shape[0]
+    print(f"\nSaved {group_count} group stage + {r32_count} R32 + {r16_count} R16 predictions to: {output_path}")
 
     # === 日本代表の所属グループのみ詳細表示 ===
     japan_group = next((g for g, ts in GROUPS_2026.items() if 'Japan' in ts), None)

@@ -15,10 +15,10 @@ date,home_team,away_team,round,selection,odds,Probability(%),EV,buy_amount_yen,m
 2026-07-04,Argentina,Cape Verde,32,1-0,6.7,11.13,0.746,0,3-2,0,lost
 2026-07-04,Colombia,Ghana,32,Colombia その他,8.8,16.29,1.4337,3200,1-0,0,lost
 2026-07-04,Australia,Egypt,32,Australia その他,41.2,2.96,1.2207,0,1-1 Egypt,0,lost
-2026-07-05,Canada,Morocco,16
-2026-07-05,Paraguay,France,16
-2026-07-06,Brazil,Norway,16
-2026-07-06,Mexico,England,16
+2026-07-05,Canada,Morocco,16,0-0,9.5,12.86,1.2221,1400,0-3,0,lost,
+2026-07-05,Paraguay,France,16,0-0,15.1,7.03,1.0617,0,0-1,0,lost,
+2026-07-06,Brazil,Norway,16,Brazil その他,10.6,10.31,1.0929,400
+2026-07-06,Mexico,England,16,0-0,7.3,11.17,0.8154,0
 2026-07-07,Portugal,Spain,16
 2026-07-07,United States,Belgium,16
 2026-07-08,Argentina,Egypt,16

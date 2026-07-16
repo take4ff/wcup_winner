@@ -27,7 +27,7 @@ date,home_team,away_team,round,selection,odds,Probability(%),EV,buy_amount_yen,m
 2026-07-11,Spain,Belgium,8,Spain その他,11.6,12.32,1.4289,1400,2-1,0,lost
 2026-07-12,Norway,England,8,England その他,14.5,11.47,1.6628,2500,1-2,0,lost
 2026-07-12,Argentina,Switzerland,8,Switzerland その他,62.0,1.38,0.8566,0,3-1,0,lost
-2026-07-15,France,Spain,4
-2026-07-16,England,Argentina,4
-2026-07-19,,,3rd
-2026-07-20,,,Final
+2026-07-15,France,Spain,4,Spain その他,26.2,5.2,1.3611,600,0-2,0,lost
+2026-07-16,England,Argentina,4,Argentina その他,20.1,4.67,0.9393,0,1-2,0,lost
+2026-07-19,France,England,3rd
+2026-07-20,Spain,Argentina,Final
